@@ -32,5 +32,16 @@ Software Unchained has decided to create a web application using the following t
   * from "FROM python:2.7" to "FROM python:3.6"
 * Changed creation of Django project
   * from "$ docker-compose run web django-admin.py startproject composeexample ." to "$ docker-compose run web django-admin.py startproject clueless ."
+* Visited http://localhost:8000/ to see if everything was successful
 
 The guide I followed can be found [here](https://docs.docker.com/compose/django/) .
+
+## Basic Docker Commands
+
+See `$ docker --help`
+
+### Starting
+`# docker start cluelessboardgame_web_1 cluelessboardgame_db_1`
+
+### Stopping
+`# docker stop cluelessboardgame_web_1 cluelessboardgame_db_1`
