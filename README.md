@@ -42,7 +42,7 @@ The guide I followed can be found [here](https://docs.docker.com/compose/django/
 Mac needs to be installed using docker machine, and can be installed using the following guide.
 * If installing a local instance follow steps 1-9
 * If installing  using this repository: follow steps 1-3,  and then step 9 when in the repo project directory
-Mac OSX guide: https://howchoo.com/g/y2y1mtkznda/getting-started-with-docker-compose-and-django
+Mac OSX guide is [here](https://howchoo.com/g/y2y1mtkznda/getting-started-with-docker-compose-and-django) .
 
 ## Basic Docker Commands
 
