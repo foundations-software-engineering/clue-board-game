@@ -27,6 +27,7 @@ Software Unchained has decided to create a web application using the following t
 
 ## Installation
 
+*For Linux/Windows installation*
 *Note I followed the following link's instructions except for the following changes*
 * edit Dockerfile
   * from "FROM python:2.7" to "FROM python:3.6"
@@ -36,6 +37,12 @@ Software Unchained has decided to create a web application using the following t
 * Visited http://localhost:8000/ to see if everything was successful
 
 The guide I followed can be found [here](https://docs.docker.com/compose/django/) .
+
+*For Mac OSX installation*
+Mac needs to be installed using docker machine, and can be installed using the following guide.
+* If installing a local instance follow steps 1-9
+* If installing  using this repository: follow steps 1-3,  and then step 9 when in the repo project directory
+Mac OSX guide: https://howchoo.com/g/y2y1mtkznda/getting-started-with-docker-compose-and-django
 
 ## Basic Docker Commands
 
