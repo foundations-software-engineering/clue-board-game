@@ -4,7 +4,10 @@ services:
     image: postgres
   web:
     build: .
-    command: python clueless/manage.py runserver 0.0.0.0:8000
+    #for Windows
+    #command: python clueless/manage.py runserver 0.0.0.0:8000
+    #for other OS:
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code
     ports:
