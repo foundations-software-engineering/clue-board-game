@@ -15,9 +15,16 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
+<<<<<<< HEAD
 from . import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+=======
+import views
+
+urlpatterns = [
+	url(r'^admin/', admin.site.urls),
+>>>>>>> kchason2
 	url(r'^$', views.index, name='index')
 ]
