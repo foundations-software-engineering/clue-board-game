@@ -26,6 +26,7 @@ Software Unchained has decided to create a web application using the following t
 * Docker - Simply and maintain a similar work environment amongst the development team
 
 ## Installation
+**Ensure settings_secret.py is in the "clueless" directory**
 
 *For Linux/Windows installation*
 *Note I followed the following link's instructions except for the following changes*
@@ -48,11 +49,21 @@ Mac OSX guide is [here](https://howchoo.com/g/y2y1mtkznda/getting-started-with-d
 
 See `$ docker --help`
 
+### Compiling
+** This needs to be done whenever the Dockerfile, docker-compose.yml or Django src changes **
+
+*We should setup Django to auto load src changes for ease development*
+
+`docker-compose build`
+
 ### Starting
-`# docker start cluelessboardgame_web_1 cluelessboardgame_db_1`
+`docker-compose up`
 
 ### Stopping
-`# docker stop cluelessboardgame_web_1 cluelessboardgame_db_1`
+CTRL + C
 
-### Connect to a container in windows
-`# docker exec -it <containerIdOrName> bash
+### Start up a container and connect to it
+`# docker run -it <containerIdOrName> bash`
+
+### Connect to a running container
+`# docker exec -it <containerIdOrName> bash`

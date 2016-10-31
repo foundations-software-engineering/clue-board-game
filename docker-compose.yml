@@ -2,11 +2,14 @@ version: '2'
 services:
   db:
     image: postgres
+    volumes_from:
+        - dbdata
+  dbdata:
+    image: busybox
+    volumes:
+      - postgres-db-volume:/data/postgres
   web:
     build: .
-    #for Windows
-    #command: python clueless/manage.py runserver 0.0.0.0:8000
-    #for other OS:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code
@@ -14,3 +17,5 @@ services:
       - "8000:8000"
     depends_on:
       - db
+volumes:
+  postgres-db-volume:
