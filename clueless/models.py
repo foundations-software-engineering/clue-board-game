@@ -19,8 +19,8 @@ class Space(models.Model):
     """
     posX = models.IntegerField()
     posY = models.IntegerField()
-    spaceNorth = models.OneToOneField('self', related_name='spaceSouth')
-    spaceEast = models.OneToOneField('self', related_name='spaceWest')
+    spaceNorth = models.OneToOneField('self', related_name='spaceSouth', blank=True)
+    spaceEast = models.OneToOneField('self', related_name='spaceWest', blank=True)
     spaceCollector = models.ForeignKey(SpaceCollection)
 
 class Player(models.Model):
@@ -29,6 +29,7 @@ class Player(models.Model):
     """
     user = models.ForeignKey(User)
     currentSpace = models.ForeignKey(Space)
+    currentGame = models.ForeignKey('Game') # game not defined yet, using string as lazy lookup
 
 class Hallway(SpaceCollection):
     """
@@ -142,7 +143,6 @@ class Game(models.Model):
     """
     Parent game object
     """
-    players = models.ManyToManyField(Player)
     caseFile = models.ForeignKey(WhoWhatWhere)
     board = models.ForeignKey(Board)
 
