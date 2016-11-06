@@ -42,8 +42,8 @@ class Player(models.Model):
     Represents a player in the context of a clueless game.  Ties back to Django user
     """
     user = models.ForeignKey(User)
-    currentSpace = models.ForeignKey(Space, blank=True)
-    currentGame = models.ForeignKey('Game', blank=True) # game not defined yet, using string as lazy lookup
+    currentSpace = models.ForeignKey(Space)
+    currentGame = models.ForeignKey('Game') # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
 
 class Hallway(SpaceCollection):
