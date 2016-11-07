@@ -2,17 +2,15 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import loader
-from clueless.models import Character, Game, Player
+from clueless.models import Character, Game, Player, Room, Weapon, WhoWhatWhere
 import logging
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
 # HttpResponse functions below here
-
-
 def index(request):
-	#return HttpResponse("Welcome to the world of Clue-Less!")
+	# return HttpResponse("Welcome to the world of Clue-Less!")
 	template = loader.get_template('clueless/index.html')
 	context = {}
 	return HttpResponse(template.render(context, request))
