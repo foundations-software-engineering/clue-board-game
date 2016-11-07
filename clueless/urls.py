@@ -21,5 +21,6 @@ from clueless import views
 urlpatterns = [
 	url(r'^admin/', admin.site.urls),
 	url(r'^$', views.index, name='index'),
-	#url(r'^testindex/', views.testindex, name='testindex')
+    url(r'^startgame/',views.startgame, name='startgame')
+    #url(r'^testindex/', views.testindex, name='testindex')
 ]
