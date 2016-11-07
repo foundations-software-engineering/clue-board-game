@@ -1,12 +1,11 @@
+from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.template import loader
-from .models import *
-from clueless import models
-
-# HttpResponse functions below here 
+from clueless.models import Game, Player
+from django.shortcuts import redirect
 
 def index(request):
-	#return HttpResponse("Welcome to the world of Clue-Less!")
+	# return HttpResponse("Welcome to the world of Clue-Less!")
 	template = loader.get_template('clueless/index.html')
 	context = {}
 	return HttpResponse(template.render(context, request))
@@ -60,3 +59,26 @@ def playerturn(request):
 	return HttpResponse(template.render(context,request))
 
 # Controller functions will go below here
+def start_game_controller(request):
+	# get the user_id of the user requesting to start a game
+	user_id = request.POST['user_id']
+
+	# get the character_id of the user requesting to start a game
+	character_name = request.POST['character_name']
+
+	# retrieve the User object by looking it up by Id.  This will retrieve the saved instance of User from the database
+	current_user = User.objects.get(id=user_id)
+
+	# create a new player object for that user
+	host_player = Player(user=current_user)
+
+	# now we are going to start the game!!!
+	new_game = Game()
+	new_game.startGame(host_player)
+
+	# alright, we have started the game.  Let's save our objects to the database!
+	host_player.save()
+	new_game.save()
+
+	# kewl, we are done now.  Let's send our user to the game interface
+	return redirect('view_game', gameid=new_game.id)
