@@ -1,11 +1,18 @@
 from django.contrib.auth.models import User
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.template import loader
 from clueless.models import Game, Player
-from django.shortcuts import redirect
+import logging
+
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
+
+# HttpResponse functions below here
+
 
 def index(request):
-	# return HttpResponse("Welcome to the world of Clue-Less!")
+	#return HttpResponse("Welcome to the world of Clue-Less!")
 	template = loader.get_template('clueless/index.html')
 	context = {}
 	return HttpResponse(template.render(context, request))
@@ -80,5 +87,14 @@ def start_game_controller(request):
 	host_player.save()
 	new_game.save()
 
-	# kewl, we are done now.  Let's send our user to the game interface
-	return redirect('view_game', gameid=new_game.id)
+	if request.method == 'POST':
+		if'user_id' not in request.POST:
+			logger.error('user_id not provided')
+		if'character_name' not in request.POST:
+			logger.error('character_name not provided')
+	else:
+		logger.error('POST expected, actual ' + request.method)
+
+	template = loader.get_template('clueless/startgame.html')
+	context = {}
+	return HttpResponse(template.render(context,request))
