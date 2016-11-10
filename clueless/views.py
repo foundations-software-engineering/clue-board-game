@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # HttpResponse functions below here
 def index(request):
-	# return HttpResponse("Welcome to the world of Clue-Less!")
+	#return HttpResponse("Welcome to the world of Clue-Less!")
 	template = loader.get_template('clueless/index.html')
 	context = {}
 	return HttpResponse(template.render(context, request))
@@ -70,10 +70,6 @@ def start_game_controller(request):
 	Creates and starts the game with the specified user_id and character_name
 	"""
 
-	template = loader.get_template('clueless/startgame.html')
-	context = {}
-	response = HttpResponse(template.render(context,request))
-
 	if request.method == 'POST':
 		if'user_id' or 'character_name' not in request.POST:
 			logger.error('user_id or character_name not provided')
@@ -108,7 +104,8 @@ def start_game_controller(request):
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
-	return response
+	# kewl, we are done now.  Let's send our user to the game interface
+	return redirect('view_game', gameid=game.id)
 
 
 def make_suggestion(request):
