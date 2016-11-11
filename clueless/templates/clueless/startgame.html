@@ -1,0 +1,15 @@
+<html>
+	<body>
+	<h1>Are you ready to play Clue?</h1>
+	<p>
+	<!--TODO: make this form more advanced later i.e. add a drop down selector for characters and make it less ugly-->
+		<form method="POST">{% csrf_token %}
+		    User Id: <input type="text" name="user_id">
+		    <br>
+		    Character Name: <input type="text" name="character_name">
+		    <br>
+		    <input type="submit" id="startgame">
+		</form>
+	</p>
+	</body>
+</html>
