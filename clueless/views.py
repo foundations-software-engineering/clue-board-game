@@ -15,4 +15,10 @@ def startgame(request):
 	context = {}
 	return HttpResponse(template.render(context,request))
 
+def playgame(request):
+	#return HttpResponse("Welcome to the game")
+	template = loader.get_template('clueless/play.html')
+	context = {}
+	return HttpResponse(template.render(context,request))
+
 # Controller functions will go below here
