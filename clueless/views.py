@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import loader
-from clueless.models import Game, Player
+from clueless.models import Character, Game, Player
 import logging
 
 # Get an instance of a logger
@@ -16,6 +16,7 @@ def index(request):
 	template = loader.get_template('clueless/index.html')
 	context = {}
 	return HttpResponse(template.render(context, request))
+
 
 def startgame(request):
 	#return HttpResponse("Welcome to the game")
@@ -67,34 +68,70 @@ def playerturn(request):
 
 # Controller functions will go below here
 def start_game_controller(request):
-	# get the user_id of the user requesting to start a game
-	user_id = request.POST['user_id']
+	"""
+	Creates and starts the game with the specified user_id and character_name
+	"""
 
-	# get the character_id of the user requesting to start a game
-	character_name = request.POST['character_name']
+	template = loader.get_template('clueless/startgame.html')
+	context = {}
+	response = HttpResponse(template.render(context,request))
 
-	# retrieve the User object by looking it up by Id.  This will retrieve the saved instance of User from the database
-	current_user = User.objects.get(id=user_id)
+	if request.method == 'POST':
+		if'user_id' or 'character_name' not in request.POST:
+			logger.error('user_id or character_name not provided')
+		else:
+			# Gets our expected fields from the user's POST
+			user_id = request.POST('user_id')
+			character_name = request.POST('character_name')
 
-	# create a new player object for that user
-	host_player = Player(user=current_user)
+			# Check if our user_id and character_name, add them if they don't
+			user = User.objects.get(id = user_id)
+			character = User.objects.get(character = character_name)
 
-	# now we are going to start the game!!!
-	new_game = Game()
-	new_game.startGame(host_player)
+			if user is None:
+				logger.info('user not found, adding them now')
+				# TODO add user to database
+				# TODO create actual user object
 
-	# alright, we have started the game.  Let's save our objects to the database!
-	host_player.save()
-	new_game.save()
+			if character is None:
+				logger.info('character not found, adding them now')
+				# TODO add character to database
+				# TODO create actual user object
+
+			# Create a Player object
+			player = Player()
+			player.user = user_id
+			player.character = character_name
+
+			# Constructs our game, saves the changes and starts it
+			game = Game()
+			game.addPlayer(player)
+			game.save()
+			game.startGame()
+	else:
+		logger.error('POST expected, actual ' + request.method)
+
+	return response
+
+
+def make_suggestion(request):
+	"""
+	Creates a suggestion
+	"""
 
 	if request.method == 'POST':
 		if'user_id' not in request.POST:
 			logger.error('user_id not provided')
-		if'character_name' not in request.POST:
-			logger.error('character_name not provided')
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
-	template = loader.get_template('clueless/startgame.html')
-	context = {}
-	return HttpResponse(template.render(context,request))
+
+def make_accusation(request):
+	"""
+	Creates a accusation
+	"""
+	if request.method == 'POST':
+		if'user_id' not in request.POST:
+			logger.error('user_id not provided')
+	else:
+		logger.error('POST expected, actual ' + request.method)
