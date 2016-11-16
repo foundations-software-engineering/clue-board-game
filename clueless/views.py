@@ -116,22 +116,44 @@ def start_game_controller(request):
 
 def make_suggestion(request):
 	"""
-	Creates a suggestion
+	Creates a suggestion (note: same as make_accusation, perhaps factor this commonality out)
 	"""
 
 	if request.method == 'POST':
-		if'user_id' not in request.POST:
-			logger.error('user_id not provided')
+		if 'character' or 'weapon' or 'room' not in request.POST:
+			logger.error('character or weapon or room not provided')
+		else:
+			# Gets our expected fields from the user's POST
+			character = request.POST('character')
+			weapon = request.POST('weapon')
+			room = request.POST('room')
+
+			# Creates our WhoWhatWhere object
+			whoWhatWhere = WhoWhatWhere()
+			whoWhatWhere.character = character
+			whoWhatWhere.weapon = weapon
+			whoWhatWhere.room = room
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
 
 def make_accusation(request):
 	"""
-	Creates a accusation
+	Creates a accusation (note: same as make_suggestion, perhaps factor this commonality out)
 	"""
 	if request.method == 'POST':
-		if'user_id' not in request.POST:
-			logger.error('user_id not provided')
+		if 'character' or 'weapon' or 'room' not in request.POST:
+			logger.error('character or weapon or room not provided')
+		else:
+			# Gets our expected fields from the user's POST
+			character = request.POST('character')
+			weapon = request.POST('weapon')
+			room = request.POST('room')
+
+			# Creates our WhoWhatWhere object
+			whoWhatWhere = WhoWhatWhere()
+			whoWhatWhere.character = character
+			whoWhatWhere.weapon = weapon
+			whoWhatWhere.room = room
 	else:
 		logger.error('POST expected, actual ' + request.method)
