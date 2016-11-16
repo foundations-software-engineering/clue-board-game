@@ -9,6 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # HttpResponse functions below here
+
 def index(request):
 	#return HttpResponse("Welcome to the world of Clue-Less!")
 	template = loader.get_template('clueless/index.html')
@@ -79,21 +80,22 @@ def start_game_controller(request):
 			character_name = request.POST('character_name')
 
 			# Check if our user_id and character_name, add them if they don't
-			user = User.objects.get(id = user_id)
-			character = User.objects.get(character = character_name)
+			user = User.objects.get(id=user_id)
+			character = User.objects.get(character=character_name)
 
 			if user is None:
 				logger.info('user not found, adding them now')
-				# TODO add user to database
-				# TODO create actual user object
+			# TODO add user to database
+			# TODO create actual user object
 
 			if character is None:
-				logger.error('character not found')
+				logger.info('character not found, adding them now')
+			# TODO add character to database
+			# TODO create actual user object
 
 			# Create a Player object
 			player = Player()
-			user = User.objects.get(id = user_id) # Get the user object
-			player.user = user
+			player.user = user_id
 			player.character = character_name
 
 			# Constructs our game, saves the changes and starts it
@@ -132,6 +134,28 @@ def make_suggestion(request):
 			whoWhatWhere.character = character
 			whoWhatWhere.weapon = weapon
 			whoWhatWhere.room = room
+
+
+
+
+def make_suggestion(request):
+	"""
+	Creates a suggestion
+	"""
+	if request.method == 'POST':
+		if'user_id' not in request.POST:
+			logger.error('user_id not provided')
+	else:
+		logger.error('POST expected, actual ' + request.method)
+
+
+def make_accusation(request):
+	"""
+	Creates a accusation
+	"""
+	if request.method == 'POST':
+		if'user_id' not in request.POST:
+			logger.error('user_id not provided')
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
