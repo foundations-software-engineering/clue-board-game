@@ -22,6 +22,7 @@ urlpatterns = [
 	url(r'^admin/', admin.site.urls),
 	url(r'^$', views.index, name='index'),
     	url(r'^startgame/',views.startgame, name='startgame'),
-	url(r'^play/',views.playgame, name='playgame')
+	url(r'^play/',views.playgame, name='playgame'),
+    url(r'^playerturn/',views.playerturn, name='playerturn')
     #url(r'^testindex/', views.testindex, name='testindex')
 ]
