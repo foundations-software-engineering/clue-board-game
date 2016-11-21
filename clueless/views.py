@@ -3,7 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import loader
-from clueless.models import Character, Game, Player, Room, Weapon, WhoWhatWhere
+from clueless.models import Accusation, Character, Game, Player, Room, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere
 import logging
 
 # Get an instance of a logger
@@ -17,6 +17,27 @@ def index(request):
 	context = {}
 	return HttpResponse(template.render(context, request))
 
+def lobby(request):
+	"""
+    This view produces a "lobby" displaying all not-started and active games
+    to a particular user.  This view also gives the user the ability to start
+    a new game
+    """
+	#get all player objects for user where games are not over
+	currentPlayers = Player.objects.filter(
+        user = request.user,
+        currentGame__status__lt = STATUS_CHOICES['Complete'])
+	#concatenates all the player's game objects into a list
+	currentGames = list()
+	for p in currentPlayers:
+		currentGames = currentGames + p.currentGame
+	#get all open games
+    #TODO: limit to only games user is not already in
+	openGames = Game.objects.filter(status = STATUS_CHOICES['Not Started'])
+	#create context and render template
+	context = {'openGames':openGames, 'currentGames':currentGames}
+	template = loader.get_template('clueless/lobby.html')
+	return HttpResponse(template.render(context, request))
 
 def startgame(request):
 	#return HttpResponse("Welcome to the game")
