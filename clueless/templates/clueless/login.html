@@ -1,34 +1,25 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-
+  <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Login | ClueLess</title>
 
-    <title>Clue-Less | Foundations of Software Engineering</title>
-
+    <!-- Bootstrap -->
+    <!-- Latest compiled and minified CSS -->
     <!-- Bootstrap Core CSS -->
     <link href="{% static 'clueless/css/bootstrap.min.css' %}"  rel="stylesheet">
 
-    <!-- Custom CSS -->
-    <link href="{% static 'clueless/css/scrolling-nav.css' %}" rel="stylesheet">
-
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
-        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
-
-</head>
-
-<!-- The #page-top ID is part of the scrolling feature - the data-spy and data-target are part of the built-in Bootstrap scrollspy function -->
-
+  </head>
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
 
     <!-- Navigation -->
@@ -77,54 +68,21 @@
     </nav>
 
     <!-- Intro Section -->
-    <section id="intro" class="intro-section">
+    <section id="intro" class="intro-section" style="margin-top:60px">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
-					<h3>AJAX Testing</h3>
-					<div class="form-group">	
-						<label for="ajax_url">URL</label>
-                    	<input type="text" id="ajax_url" class="form-control" />
-                    	<button class="btn btn-warning" id="submit_ajax">Send Request</button>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-            	<div class="col-lg-12" id="ajax_results"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="about-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <h1>Clue-Less | Software Unchained</h1>
-                    <p>This is the web page for "Software Unchained" team's implementation of Clue-Less for the Johns Hopkins University Foundations of Software Engineering class (605.401).</p>
-                    <p>Team members are: Keith Chason, Rebecca Friedman, Grehg Hilston, Jerrold Vincent</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Services Section -->
-    <section id="start_game" class="services-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <h1>Start Game</h1>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Contact Section -->
-    <section id="rules" class="contact-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <h1>Rules Section</h1>
+                    <form class="form-signin" action="" method="post">{% csrf_token %}
+                        <h2 class="form-signin-heading">Please sign in</h2>
+                        {% if loginError %}
+                        <p class="bg-danger">Error logging in</p>
+                        {% endif %}
+                        <label for="username" class="sr-only">Username</label>
+                            <input type="text" id="username" class="form-control" placeholder="Username" name="username" required autofocus>
+                        <label for="password" class="sr-only">Password</label>
+                            <input type="password" id="password" class="form-control" placeholder="Password" name="password" required>
+                        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -138,10 +96,19 @@
 
     <!-- Scrolling Nav JavaScript -->
     <script src="{% static 'clueless/js/jquery.easing.min.js' %}"></script>
-    <script src="{% static 'clueless/js/scrolling-nav.js' %}"></script>
+
     <!-- App Specific JS -->
-    <script src="{% static 'clueless/js/game.js' %}"></script>
+    <script src="{% static 'clueless/js/lobby.js' %}"></script>
 
-</body>
+    <script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
+    <script src="https://code.createjs.com/preloadjs-0.6.2.min.js"></script>
 
+    <script type="text/javascript">
+
+
+    $(document).ready(function(){
+
+    });
+    </script>
+  </body>
 </html>

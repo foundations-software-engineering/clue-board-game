@@ -19,9 +19,11 @@ from clueless import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^startgame/', views.startgame, name='startgame'),
+    url(r'^lobby/', views.lobby, name='lobby'),
+    url(r'^login/', views.login, name='login'),
+    url(r'^logout/', views.logout, name='logout'),
     url(r'^play/', views.playgame, name='playgame'),
     url(r'^playerturn/', views.playerturn, name='playerturn'),
-    url(r'^lobby/', views.lobby, name='lobby'),
+    url(r'^startgame/', views.startgame, name='startgame'),
     url(r'^$', views.index, name='index'),
 ]
