@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import loader
@@ -68,39 +69,43 @@ def playerturn(request):
 # Controller functions will go below here
 def start_game_controller(request):
 	"""
-	Creates and starts the game with the specified user_id and character_name
+	Creates a game with the given host defined by his/her user_id. Also provided
+	is the host's designated character. Other players may join later, as this
+	game is not available in the lobby as a joinable game.
 	"""
 
 	if request.method == 'POST':
 		if'user_id' or 'character_name' not in request.POST:
 			logger.error('user_id or character_name not provided')
+			# TODO Redirect to appropriate error page
 		else:
 			# Gets our expected fields from the user's POST
 			user_id = request.POST('user_id')
 			character_name = request.POST('character_name')
 
-			# Check if our user_id and character_name, add them if they don't
-			user = User.objects.get(id=user_id)
-			character = User.objects.get(character=character_name)
-
-			if user is None:
+			try:
+				user = User.objects.get(id = user_id)
+			except ObjectDoesNotExist: # Possible User.DoesNotExist
 				logger.info('user not found, adding them now')
-			# TODO add user to database
-			# TODO create actual user object
+				# TODO create actual user object
+				# TODO add user to database
 
-			if character is None:
-				logger.error('character not found')
+			try:
+				character = Character.objects.get(name = character_name)
+			except ObjectDoesNotExist: # Possible User.DoesNotExist
+				logger.error('''character not found (Did you forget to add the
+				character in the admin panel?''')
+				# TODO Redirect to appropriate error page
 
-			# Create a Player object
+			# Create a Player object for the Host
 			player = Player()
-			user = User.objects.get(id = user_id) # Get the user object
 			player.user = user
-			player.character = character_name
+			player.character = character
 
 			# Constructs our game, saves the changes and starts it
 			game = Game()
 			game.addPlayer(player)
-			game.save()
+			game.save() # TODO: Check if this is to do be done before startGame()
 			game.startGame()
 	else:
 		logger.error('POST expected, actual ' + request.method)
@@ -139,7 +144,8 @@ def make_suggestion(request):
 
 def make_suggestion(request):
 	"""
-	Creates a suggestion (note: same as make_accusation, perhaps factor this commonality out)
+	Creates a suggestion (note: same as make_accusation, perhaps factor this
+	commonality out)
 	"""
 	if request.method == 'POST':
 		if 'character' or 'weapon' or 'room' not in request.POST:
@@ -166,7 +172,8 @@ def make_suggestion(request):
 
 def make_accusation(request):
 	"""
-	Creates a accusation (note: same as make_suggestion, perhaps factor this commonality out)
+	Creates a accusation (note: same as make_suggestion, perhaps factor this
+	commonality out)
 	"""
 	if request.method == 'POST':
 		if 'character' or 'weapon' or 'room' not in request.POST:
@@ -189,7 +196,6 @@ def make_accusation(request):
 			whoWhatWhere.room = room
 	else:
 		logger.error('POST expected, actual ' + request.method)
-
 
 def make_accusation(request):
 	"""
