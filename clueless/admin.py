@@ -1,7 +1,7 @@
 from django.contrib import admin
 from clueless.models import *
 
-
+#need to register the models to the admin screen
 admin.site.register(Board)
 admin.site.register(SpaceCollection)
 admin.site.register(Space)

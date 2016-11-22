@@ -68,6 +68,8 @@ def lobby(request):
 	This view produces a "lobby" displaying all not-started and active games
 	to a particular user.  This view also gives the user the ability to start
 	a new game
+	:param request:
+	:return:
 	"""
 
 	#get all player objects for user where games are not over
