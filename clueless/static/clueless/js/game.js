@@ -1,3 +1,34 @@
+var canvas_width = 800;
+var canvas_height = 800;
+
+var locations = [
+	[11, "Study Trapdoor", 0, 0, 0.05625 * canvas_width, 0.05625 * canvas_height],
+	[13, "Lounge Trapdoor", 0.94375 * canvas_width, 0, canvas_width, 0.05625 * canvas_height],
+	[17, "Conservatory Trapdoor", 0, 0.94375 * canvas_height, 0.05625 * canvas_width, canvas_height],
+	[19, "Kitchen Trapdoor", 0.94375 * canvas_width, 0.94375 * canvas_height, canvas_width, canvas_height],
+	[1, "Study", 0, 0, 0.2125 * canvas_width, 0.26875 * canvas_height],
+	[2, "Hall", 0.325 * canvas_width, 0, 0.65625 * canvas_width, 0.26875 * canvas_height],
+	[3, "Lounge", 0.76875 * canvas_width, 0, canvas_width, 0.26875 * canvas_height],
+	[4, "Library", 0, 0.3875 * canvas_height, 0.2125 * canvas_width, 0.60625 * canvas_height],
+	[5, "Billiard Room", 0.325 * canvas_width, 0.3875 * canvas_height, 0.65625 * canvas_width, 0.60625 * canvas_height],
+	[6, "Dining Room", 0.76875 * canvas_width, 0.3875 * canvas_height, canvas_width, 0.60625 * canvas_height],
+	[7, "Conservatory", 0, 0.71875 * canvas_height, 0.2125 * canvas_width, canvas_height],
+	[8, "Ballroom", 0.325 * canvas_width, 0.71875 * canvas_height, 0.65625 * canvas_width, canvas_height],
+	[9, "Kitchen", 0.76875 * canvas_width, 0.71875 * canvas_height, canvas_width, canvas_height],
+	[21, "Study-Hall Hallway", 0.2125 * canvas_width, 0, 0.325 * canvas_width, 0.26875 * canvas_height],
+	[22, "Hall-Lounge Hallway", 0.65625 * canvas_width, 0, 0.76875 * canvas_width, 0.26875 * canvas_height],
+	[23, "Study-Library Hallway", 0, 0.26875 * canvas_height, 0.2125 * canvas_width, 0.3875 * canvas_height],
+	[24, "Hall-Billiard Hallway", 0.325 * canvas_width, 0.26875 * canvas_height, 0.65625 * canvas_width, 0.3875 * canvas_height],
+	[25, "Lounge-Dining Hallway", 0.76875 * canvas_width, 0.26875 * canvas_height, canvas_width, 0.3875 * canvas_height],
+	[26, "Library-Billiard Hallway", 0.2125 * canvas_width, 0.3875 * canvas_height, 0.325 * canvas_width, 0.60625 * canvas_height],
+	[27, "Billiard-Dining Hallway", 0.65625 * canvas_width, 0.3875 * canvas_height, 0.76875 * canvas_width, 0.60625 * canvas_height],
+	[28, "Library-Conservatory Hallway", 0, 0.60625 * canvas_height, 0.2125 * canvas_width, 0.71875 * canvas_height],
+	[29, "Billiard-Ball Hallway", 0.325 * canvas_width, 0.60625 * canvas_height, 0.65625 * canvas_width, 0.71875 * canvas_height],
+	[30, "Dining-Kitchen Hallway", 0.76875 * canvas_width, 0.60625 * canvas_height, canvas_width, 0.71875 * canvas_height],
+	[31, "Conservatory-Ball Hallway", 0.2125 * canvas_width, 0.71875 * canvas_height, 0.325 * canvas_width, canvas_height],
+	[32, "Ball-Kitchen Hallway", 0.65625 * canvas_width, 0.71875 * canvas_height, 0.76875 * canvas_width, canvas_height]  
+];
+
 function Player (color, x, y) {
 	//Declare instance variables
 	this.color = color;
@@ -22,6 +53,8 @@ function Player (color, x, y) {
 }
 
 function getLocationFromCoordinates(x, y){
+
+	/*
 	var locations = [
 		[11, "Study Trapdoor", 0, 0, 45, 45],
 		[13, "Lounge Trapdoor", 755, 0, 800, 45],
@@ -48,7 +81,7 @@ function getLocationFromCoordinates(x, y){
 		[30, "Dining-Kitchen Hallway", 615, 485, 800, 575],
 		[31, "Conservatory-Ball Hallway", 170, 575, 260, 800],
 		[32, "Ball-Kitchen Hallway", 525, 575, 615, 800]  
-	];
+	]; */
 	
 	//console.log('('+x+','+y+')');
 	
