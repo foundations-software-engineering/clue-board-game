@@ -1,0 +1,33 @@
+<html>
+	<body>
+	<h1>It is your turn! What is your move?</h1>
+	<p>
+	<!--TODO: make this form more advanced later and make it less ugly-->
+		<form method="POST">{% csrf_token %}
+		    User Id: <input type="text" name="user_id">
+		    <br>
+		    	<select name="player_move">
+				  <option value="makeAccusation">Make an Accusation</option>
+				  <option value="makeSuggestion">Make a Suggestion</option>
+				  <option value="moveSpace">Move to the:</option>
+				</select>
+		    <br>
+		    <!--hard coded for now, but TODO: add JS to only display this if Move To was selected, also to exclude the current space-->
+		    <br>
+		    	<select name="new_position">
+				  <option value="study">Study</option>
+				  <option value="hall">Hall</option>
+				  <option value="lounge">Lounge</option>
+				  <option value="library">Library</option>
+				  <option value="billiardRoom">Billiard Room</option>
+				  <option value="diningRoom">Dining Room</option>
+				  <option value="conservatory">Conservatory</option>
+				  <option value="ballroom">Ballroom</option>
+				  <option value="kitchen">Kitchen</option>
+				</select>
+		    <br>
+		    <input type="submit" id="playerturn">
+		</form>
+	</p>
+	</body>
+</html>
