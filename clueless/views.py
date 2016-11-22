@@ -89,13 +89,12 @@ def start_game_controller(request):
 			# TODO create actual user object
 
 			if character is None:
-				logger.info('character not found, adding them now')
-			# TODO add character to database
-			# TODO create actual user object
+				logger.error('character not found')
 
 			# Create a Player object
 			player = Player()
-			player.user = user_id
+			user = User.objects.get(id = user_id) # Get the user object
+			player.user = user
 			player.character = character_name
 
 			# Constructs our game, saves the changes and starts it
@@ -146,10 +145,15 @@ def make_suggestion(request):
 		if 'character' or 'weapon' or 'room' not in request.POST:
 			logger.error('character or weapon or room not provided')
 		else:
-			# Gets our expected fields from the user's POST
-			character = request.POST('character')
-			weapon = request.POST('weapon')
-			room = request.POST('room')
+			# Gets our expected id fields from the user's POST
+			character_id = request.POST('character')
+			weapon_id = request.POST('weapon')
+			room_id = request.POST('room')
+
+			# Lookup the IDs in our database
+			character = Character.objects.get(id = character_id)
+			weapon = Weapon.objects.get(id = weapon_id)
+			room = Room.objects.get(id = room_id)
 
 			# Creates our WhoWhatWhere object
 			whoWhatWhere = WhoWhatWhere()
@@ -169,9 +173,14 @@ def make_accusation(request):
 			logger.error('character or weapon or room not provided')
 		else:
 			# Gets our expected fields from the user's POST
-			character = request.POST('character')
-			weapon = request.POST('weapon')
-			room = request.POST('room')
+			character_id = request.POST('character')
+			weapon_id = request.POST('weapon')
+			room_id = request.POST('room')
+
+			# Lookup the IDs in our database
+			character = Character.objects.get(id = character_id)
+			weapon = Weapon.objects.get(id = weapon_id)
+			room = Room.objects.get(id = room_id)
 
 			# Creates our WhoWhatWhere object
 			whoWhatWhere = WhoWhatWhere()
