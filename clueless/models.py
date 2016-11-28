@@ -37,6 +37,9 @@ class Space(models.Model):
     spaceEast = models.OneToOneField('self', related_name='spaceWest', blank=True, null=True)
     spaceCollector = models.ForeignKey(SpaceCollection)
 
+    def __str__(self):
+        return("({},{})".format(self.posX, self.posY))
+
 class Player(models.Model):
     """
     Represents a player in the context of a clueless game.  Ties back to Django user
@@ -45,6 +48,11 @@ class Player(models.Model):
     currentSpace = models.ForeignKey(Space)
     currentGame = models.ForeignKey('Game') # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
+
+    def __str__(self):
+        return("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
+            self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
+        ))
 
 class Hallway(SpaceCollection):
     """
@@ -73,22 +81,15 @@ class Card(models.Model):
         """
         return(self.name == otherCard.name)
 
+    def __str__(self):
+        return(self.name)
+
 
 class Room(SpaceCollection, Card):
     """
     Represents each room.
 	"""
-    background = models.CharField(max_length=50)
-    position = models.IntegerField()
-
-    # :( not very pythonic.  Commenting out
-    """
-	def getTitle(self):
-		return self.title
-
-	def getPosition(self):
-		return self.position
-	"""
+    pass
 
 
 class Character(Card):
@@ -122,6 +123,11 @@ class WhoWhatWhere(models.Model):
         charEqual = self.character.compare(otherWhoWhatWhere.character)
         weaponEqual = self.weapon.compare(otherWhoWhatWhere.weapon)
         return(roomEqual and charEqual and weaponEqual)
+
+    def __str__(self):
+        return("character: {}, room: {}, weapon: {}".format(
+            self.character.__str__(), self.room.__str__(), self.weapon.__str__()
+        ))
 
 class Turn(models.Model):
     """
@@ -213,6 +219,7 @@ class Game(models.Model):
     caseFile = models.ForeignKey(CaseFile)
     board = models.ForeignKey(Board)
     status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
+    startTime = models.DateTimeField(default = datetime.datetime.now, blank = True)
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
     hostPlayer = models.ForeignKey(Player)
 
