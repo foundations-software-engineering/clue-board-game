@@ -33,9 +33,12 @@ class Space(models.Model):
     """
     posX = models.IntegerField()
     posY = models.IntegerField()
-    spaceNorth = models.OneToOneField('self', related_name='spaceSouth', blank=True)
-    spaceEast = models.OneToOneField('self', related_name='spaceWest', blank=True)
+    spaceNorth = models.OneToOneField('self', related_name='spaceSouth', blank=True, null=True)
+    spaceWest = models.OneToOneField('self', related_name='spaceEast', blank=True, null=True)
     spaceCollector = models.ForeignKey(SpaceCollection)
+
+    def __str__(self):
+        return("({},{})".format(self.posX, self.posY))
 
 class Player(models.Model):
     """
@@ -45,6 +48,11 @@ class Player(models.Model):
     currentSpace = models.ForeignKey(Space)
     currentGame = models.ForeignKey('Game') # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
+
+    def __str__(self):
+        return("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
+            self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
+        ))
 
 class Hallway(SpaceCollection):
     """
@@ -65,30 +73,23 @@ class Card(models.Model):
     card_id = models.AutoField(primary_key=True) #had to override, due to multiple inheritence conflicts later
     name = models.CharField(max_length=30)
 
-    def __eq__(self, otherCard):
+    def compare(self, otherCard):
         """
         Compares two Card objects
         :param otherCard: object of class Card
         :return: true if objects are equal, false otherwise
         """
-        return self.name == otherCard.name
+        return(self.name == otherCard.name)
+
+    def __str__(self):
+        return(self.name)
 
 
 class Room(SpaceCollection, Card):
     """
     Represents each room.
 	"""
-    background = models.CharField(max_length=50)
-    position = models.IntegerField()
-
-    # :( not very pythonic.  Commenting out
-    """
-	def getTitle(self):
-		return self.title
-
-	def getPosition(self):
-		return self.position
-	"""
+    pass
 
 
 class Character(Card):
@@ -113,15 +114,20 @@ class WhoWhatWhere(models.Model):
     weapon = models.ForeignKey(Weapon)
     room = models.ForeignKey(Room)
 
-    def __eq__(self, otherWhoWhatWhere):
+    def compare(self, otherWhoWhatWhere):
         """
         :param otherWhoWhatWhere: object of class WhoWhatWhere
         :return: true if room, character and weapon are all equal
         """
-        roomEqual = self.room.__eq__(otherWhoWhatWhere.room)
-        charEqual = self.character.__eq__(otherWhoWhatWhere.character)
-        weaponEqual = self.weapon.__eq__(otherWhoWhatWhere.weapon)
+        roomEqual = self.room.compare(otherWhoWhatWhere.room)
+        charEqual = self.character.compare(otherWhoWhatWhere.character)
+        weaponEqual = self.weapon.compare(otherWhoWhatWhere.weapon)
         return(roomEqual and charEqual and weaponEqual)
+
+    def __str__(self):
+        return("character: {}, room: {}, weapon: {}".format(
+            self.character.__str__(), self.room.__str__(), self.weapon.__str__()
+        ))
 
 class Turn(models.Model):
     """
@@ -213,7 +219,9 @@ class Game(models.Model):
     caseFile = models.ForeignKey(CaseFile)
     board = models.ForeignKey(Board)
     status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
+    startTime = models.DateTimeField(default = datetime.datetime.now, blank = True)
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
+    hostPlayer = models.ForeignKey(Player)
 
     def startGame(self, playerHost):
         """
