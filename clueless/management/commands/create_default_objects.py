@@ -13,12 +13,19 @@ class Command(BaseCommand):
         defBoard.save()
 
         #create 6 default characters
-        Character(name = "Miss Scarlet").save()
-        Character(name = "Col. Mustard").save()
-        Character(name = "Mrs. White").save()
-        Character(name = "Mr. Green").save()
-        Character(name = "Mrs. Peacock").save()
-        Character(name = "Prof. Plum").save()
+        pScarlet = Character(name = "Miss Scarlet")
+        pMustard = Character(name = "Col. Mustard")
+        pWhite = Character(name = "Mrs. White")
+        pGreen = Character(name = "Mr. Green")
+        pPeacock = Character(name = "Mrs. Peacock")
+        pPlum = Character(name = "Prof. Plum")
+        pScarlet.save()
+        pMustard.save()
+        pWhite.save()
+        pGreen.save()
+        pPeacock.save()
+        pPlum.save()
+
         #create 6 default weapons
         Weapon(name = "Rope").save()
         Weapon(name = "Lead Pipe").save()
@@ -149,5 +156,20 @@ class Command(BaseCommand):
         s05_01.save()
         s01_05.spaceWest = s04_02
         s01_05.save()
+
+        #add default space to user model
+        pScarlet.defaultSpace = s04_01
+        pMustard.defaultSpace = s05_02
+        pWhite.defaultSpace = s04_05
+        pGreen.defaultSpace = s02_05
+        pPeacock.defaultSpace = s01_04
+        pPlum.defaultSpace = s01_02
+
+        pScarlet.save()
+        pMustard.save()
+        pWhite.save()
+        pGreen.save()
+        pPeacock.save()
+        pPlum.save()
 
         print("Finished!")

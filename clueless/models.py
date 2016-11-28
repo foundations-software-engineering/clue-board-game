@@ -96,7 +96,7 @@ class Character(Card):
     """
     Represents each character in the game clue (the actual character, like Mr. Green)
 	"""
-    pass
+    defaultSpace = models.ForeignKey(Space)
 
 class Weapon(Card):
     """
