@@ -87,7 +87,7 @@
                             {% for cg in currentGames %}
                             <tr>
                                 <th scope="row">{{ cg.id }}</th>
-                                <td>Not Yet Determined</td>
+                                <td>{{ cg.hostPlayer.user.username }}</td>
                                 <td>{{ cg.lastUpdateTime }}</td>
                                 <td>{{ cg.get_status_display }}</td>
                                 <td>

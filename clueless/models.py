@@ -214,6 +214,7 @@ class Game(models.Model):
     board = models.ForeignKey(Board)
     status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
+    hostPlayer = models.ForeignKey(Player)
 
     def startGame(self, playerHost):
         """
