@@ -34,7 +34,7 @@ class Space(models.Model):
     posX = models.IntegerField()
     posY = models.IntegerField()
     spaceNorth = models.OneToOneField('self', related_name='spaceSouth', blank=True, null=True)
-    spaceEast = models.OneToOneField('self', related_name='spaceWest', blank=True, null=True)
+    spaceWest = models.OneToOneField('self', related_name='spaceEast', blank=True, null=True)
     spaceCollector = models.ForeignKey(SpaceCollection)
 
     def __str__(self):
