@@ -95,7 +95,8 @@ def lobby(request):
 def startgame(request):
 	#return HttpResponse("Welcome to the game")
 	template = loader.get_template('clueless/startgame.html')
-	context = {}
+	characterList = Character.objects.all().order_by('name')
+	context = {'chracterList':characterList}
 	return HttpResponse(template.render(context,request))
 
 def playgame(request):
