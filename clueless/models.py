@@ -33,8 +33,8 @@ class Space(models.Model):
     """
     posX = models.IntegerField()
     posY = models.IntegerField()
-    spaceNorth = models.OneToOneField('self', related_name='spaceSouth', blank=True)
-    spaceEast = models.OneToOneField('self', related_name='spaceWest', blank=True)
+    spaceNorth = models.OneToOneField('self', related_name='spaceSouth', blank=True, null=True)
+    spaceEast = models.OneToOneField('self', related_name='spaceWest', blank=True, null=True)
     spaceCollector = models.ForeignKey(SpaceCollection)
 
 class Player(models.Model):
@@ -65,13 +65,13 @@ class Card(models.Model):
     card_id = models.AutoField(primary_key=True) #had to override, due to multiple inheritence conflicts later
     name = models.CharField(max_length=30)
 
-    def __eq__(self, otherCard):
+    def compare(self, otherCard):
         """
         Compares two Card objects
         :param otherCard: object of class Card
         :return: true if objects are equal, false otherwise
         """
-        return self.name == otherCard.name
+        return(self.name == otherCard.name)
 
 
 class Room(SpaceCollection, Card):
@@ -113,14 +113,14 @@ class WhoWhatWhere(models.Model):
     weapon = models.ForeignKey(Weapon)
     room = models.ForeignKey(Room)
 
-    def __eq__(self, otherWhoWhatWhere):
+    def compare(self, otherWhoWhatWhere):
         """
         :param otherWhoWhatWhere: object of class WhoWhatWhere
         :return: true if room, character and weapon are all equal
         """
-        roomEqual = self.room.__eq__(otherWhoWhatWhere.room)
-        charEqual = self.character.__eq__(otherWhoWhatWhere.character)
-        weaponEqual = self.weapon.__eq__(otherWhoWhatWhere.weapon)
+        roomEqual = self.room.compare(otherWhoWhatWhere.room)
+        charEqual = self.character.compare(otherWhoWhatWhere.character)
+        weaponEqual = self.weapon.compare(otherWhoWhatWhere.weapon)
         return(roomEqual and charEqual and weaponEqual)
 
 class Turn(models.Model):
@@ -214,6 +214,7 @@ class Game(models.Model):
     board = models.ForeignKey(Board)
     status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
+    hostPlayer = models.ForeignKey(Player)
 
     def startGame(self, playerHost):
         """
