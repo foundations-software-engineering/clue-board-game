@@ -12,20 +12,6 @@ class Command(BaseCommand):
         defBoard = Board()
         defBoard.save()
 
-        #create 6 default characters
-        pScarlet = Character(name = "Miss Scarlet")
-        pMustard = Character(name = "Col. Mustard")
-        pWhite = Character(name = "Mrs. White")
-        pGreen = Character(name = "Mr. Green")
-        pPeacock = Character(name = "Mrs. Peacock")
-        pPlum = Character(name = "Prof. Plum")
-        pScarlet.save()
-        pMustard.save()
-        pWhite.save()
-        pGreen.save()
-        pPeacock.save()
-        pPlum.save()
-
         #create 6 default weapons
         Weapon(name = "Rope").save()
         Weapon(name = "Lead Pipe").save()
@@ -157,19 +143,12 @@ class Command(BaseCommand):
         s01_05.spaceWest = s04_02
         s01_05.save()
 
-        #add default space to user model
-        pScarlet.defaultSpace = s04_01
-        pMustard.defaultSpace = s05_02
-        pWhite.defaultSpace = s04_05
-        pGreen.defaultSpace = s02_05
-        pPeacock.defaultSpace = s01_04
-        pPlum.defaultSpace = s01_02
-
-        pScarlet.save()
-        pMustard.save()
-        pWhite.save()
-        pGreen.save()
-        pPeacock.save()
-        pPlum.save()
+        # create 6 default characters
+        Character(name="Miss Scarlet", defaultSpace=s04_01).save()
+        Character(name="Col. Mustard", defaultSpace=s05_02).save()
+        Character(name="Mrs. White", defaultSpace=s04_05).save()
+        Character(name="Mr. Green", defaultSpace=s02_05).save()
+        Character(name="Mrs. Peacock", defaultSpace=s01_04).save()
+        Character(name="Prof. Plum", defaultSpace=s01_02).save()
 
         print("Finished!")
