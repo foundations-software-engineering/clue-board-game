@@ -182,6 +182,9 @@ def start_game_controller(request):
 			game.initializeGame(player)
 			game.save()
 
+			game.addPlayer(player)
+			game.save()
+
 			# kewl, we are done now.  Let's send our user to the game interface
 			return redirect('playgame', game_id = game.id)
 	else:

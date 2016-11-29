@@ -239,7 +239,6 @@ class Game(models.Model):
         randCaseFile = CaseFile.createRandom()
         randCaseFile.save()
         self.caseFile = randCaseFile
-        self.addPlayer(playerHost)
 
     def startGame(self):
         """
@@ -254,8 +253,8 @@ class Game(models.Model):
         Adds a player to the game
         :param player: Player to be added
         """
-        #TODO: implement this method
-        pass
+        player.currentGame = self
+        player.save()
 
     def endGame(self, winningPlayer):
         """
