@@ -32,10 +32,10 @@
                     <form class="form-startgame" action="{% url 'start_game_controller' %}" method="post">{% csrf_token %}
                         <h2 class="form-startgame-heading">Start a New Game!</h2>
 						<br/>
-                        <label for="character">Which Character would you like to be?</label>
-                            <select class="form-control" id="character"  placeholder="Plese Select a Character" name="character" required>
+                        <label for="character_id">Which Character would you like to be?</label>
+                            <select class="form-control" id="character_id"  placeholder="Plese Select a Character" name="character_id" required>
 								{% for c in chracterList %}
-								<option value="{{ c.id }}">{{ c.name }}</option>
+								<option value="{{ c.card_id }}">{{ c.name }}</option>
 								{% endfor %}
 							</select>
 						<br/>

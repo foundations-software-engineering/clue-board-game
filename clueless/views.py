@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Character, Game, Player, Room, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere
+from clueless.models import Accusation, Board, Character, Game, Player, Room, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere
 import logging
 
 # Get an instance of a logger
@@ -92,6 +92,7 @@ def lobby(request):
 	template = loader.get_template('clueless/lobby.html')
 	return HttpResponse(template.render(context, request))
 
+@login_required
 def startgame(request):
 	#return HttpResponse("Welcome to the game")
 	template = loader.get_template('clueless/startgame.html')
@@ -99,12 +100,14 @@ def startgame(request):
 	context = {'chracterList':characterList}
 	return HttpResponse(template.render(context,request))
 
+@login_required
 def playgame(request):
 	#return HttpResponse("Welcome to the game")
 	template = loader.get_template('clueless/play.html')
 	context = {}
 	return HttpResponse(template.render(context,request))
 
+@login_required
 def playerturn(request):
 	template = loader.get_template('clueless/playerturn.html')
 	context = {}
@@ -142,51 +145,46 @@ def playerturn(request):
 	return HttpResponse(template.render(context,request))
 
 # Controller functions will go below here
+@login_required
 def start_game_controller(request):
 	"""
 	Creates a game with the given host defined by his/her user_id. Also provided
 	is the host's designated character. Other players may join later, as this
 	game is not available in the lobby as a joinable game.
 	"""
-
 	if request.method == 'POST':
-		if'user_id' or 'character_name' not in request.POST:
-			logger.error('user_id or character_name not provided')
-			# TODO Redirect to appropriate error page
+		if 'character_id' not in request.POST:
+			logger.error('character_id not provided')
+			return redirect('startgame')
 		else:
-			# Gets our expected fields from the user's POST
-			user_id = request.POST('user_id')
-			character_name = request.POST('character_name')
+			#can get logged in user direct from request object
+			user = request.user
+			character_id = request.POST.get('character_id')
 
 			try:
-				user = User.objects.get(id = user_id)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.info('user not found, adding them now')
-				# TODO create actual user object
-				# TODO add user to database
-
-			try:
-				character = Character.objects.get(name = character_name)
+				character = Character.objects.get(card_id = character_id)
 			except ObjectDoesNotExist: # Possible User.DoesNotExist
 				logger.error('''character not found (Did you forget to add the
 				character in the admin panel?''')
-				# TODO Redirect to appropriate error page
+				return redirect('startgame')
+
+			# Constructs our game, saves the changes and starts it
+			game = Game()
 
 			# Create a Player object for the Host
 			player = Player()
 			player.user = user
 			player.character = character
+			player.currentSpace = character.defaultSpace
+			player.save()
 
-			# Constructs our game, saves the changes and starts it
-			game = Game()
-			game.addPlayer(player)
-			game.save() # TODO: Check if this is to do be done before startGame()
-			game.startGame()
+			game.initializeGame(player)
+			game.save()
+
+			# kewl, we are done now.  Let's send our user to the game interface
+			return redirect('playgame')
 	else:
 		logger.error('POST expected, actual ' + request.method)
-
-	# kewl, we are done now.  Let's send our user to the game interface
-	return redirect('view_game', gameid=game.id)
 
 
 def make_suggestion(request):

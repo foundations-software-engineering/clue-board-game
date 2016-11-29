@@ -46,7 +46,7 @@ class Player(models.Model):
     """
     user = models.ForeignKey(User)
     currentSpace = models.ForeignKey(Space)
-    currentGame = models.ForeignKey('Game') # game not defined yet, using string as lazy lookup
+    currentGame = models.ForeignKey('Game', blank=True, null=True) # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
 
     def __str__(self):
@@ -210,7 +210,11 @@ class CaseFile(WhoWhatWhere):
         :return: CaseFile with random selections for room, character and weapon
         """
         #TODO: actually write this function...
-        return(None)
+        randCaseFile = CaseFile()
+        randCaseFile.character = Character.objects.all()[0]
+        randCaseFile.room = Room.objects.all()[0]
+        randCaseFile.weapon = Weapon.objects.all()[0]
+        return(randCaseFile)
 
 class Game(models.Model):
     """
@@ -223,7 +227,21 @@ class Game(models.Model):
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
     hostPlayer = models.ForeignKey(Player)
 
-    def startGame(self, playerHost):
+    def initializeGame(self, playerHost):
+        """
+        Sets up a game with all the defaults
+        :param playerHost: A player object representing the player that started the game
+        :return:
+        """
+        self.hostPlayer = playerHost
+        self.board = Board.objects.all()[0]
+        self.status = NOT_STARTED
+        randCaseFile = CaseFile.createRandom()
+        randCaseFile.save()
+        self.caseFile = randCaseFile
+        self.addPlayer(playerHost)
+
+    def startGame(self):
         """
         Starts a game
         :param playerHost: player that will be the host
