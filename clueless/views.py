@@ -101,10 +101,11 @@ def startgame(request):
 	return HttpResponse(template.render(context,request))
 
 @login_required
-def playgame(request):
+def playgame(request, game_id):
 	#return HttpResponse("Welcome to the game")
 	template = loader.get_template('clueless/play.html')
-	context = {}
+	game = Game.objects.get(id = game_id)
+	context = {"game":game}
 	return HttpResponse(template.render(context,request))
 
 @login_required
@@ -182,7 +183,7 @@ def start_game_controller(request):
 			game.save()
 
 			# kewl, we are done now.  Let's send our user to the game interface
-			return redirect('playgame')
+			return redirect('playgame', game_id = game.id)
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
