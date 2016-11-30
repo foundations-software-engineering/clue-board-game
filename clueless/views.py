@@ -190,35 +190,6 @@ def start_game_controller(request):
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
-
-def make_suggestion(request):
-	"""
-	Creates a suggestion (note: same as make_accusation, perhaps factor this commonality out)
-	"""
-
-	if request.method == 'POST':
-		if 'character' or 'weapon' or 'room' not in request.POST:
-			logger.error('character or weapon or room not provided')
-		else:
-			# Gets our expected id fields from the user's POST
-			character_id = request.POST('character')
-			weapon_id = request.POST('weapon')
-			room_id = request.POST('room')
-
-			# Lookup the IDs in our database
-			character = Character.objects.get(id = character_id)
-			weapon = Weapon.objects.get(id = weapon_id)
-			room = Room.objects.get(id = room_id)
-
-			# Creates our WhoWhatWhere object
-			whoWhatWhere = WhoWhatWhere()
-			whoWhatWhere.character = character
-			whoWhatWhere.weapon = weapon
-			whoWhatWhere.room = room
-
-
-
-
 def make_suggestion(request):
 	"""
 	Creates a suggestion that is composed of a character, weapon and room
@@ -307,31 +278,5 @@ def make_accusation(request):
 
 			accusation = Accusation()
 			accusation.whoWhatWhere = whoWhatWhere
-	else:
-		logger.error('POST expected, actual ' + request.method)
-
-def make_accusation(request):
-	"""
-	Creates a accusation (note: same as make_suggestion, perhaps factor this commonality out)
-	"""
-	if request.method == 'POST':
-		if 'character' or 'weapon' or 'room' not in request.POST:
-			logger.error('character or weapon or room not provided')
-		else:
-			# Gets our expected fields from the user's POST
-			character_id = request.POST('character')
-			weapon_id = request.POST('weapon')
-			room_id = request.POST('room')
-
-			# Lookup the IDs in our database
-			character = Character.objects.get(id = character_id)
-			weapon = Weapon.objects.get(id = weapon_id)
-			room = Room.objects.get(id = room_id)
-
-			# Creates our WhoWhatWhere object
-			whoWhatWhere = WhoWhatWhere()
-			whoWhatWhere.character = character
-			whoWhatWhere.weapon = weapon
-			whoWhatWhere.room = room
 	else:
 		logger.error('POST expected, actual ' + request.method)
