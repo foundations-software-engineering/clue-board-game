@@ -226,6 +226,7 @@ class Game(models.Model):
     startTime = models.DateTimeField(default = datetime.datetime.now, blank = True)
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
     hostPlayer = models.ForeignKey(Player)
+    name = models.CharField(max_length=60)
 
     def initializeGame(self, playerHost):
         """
@@ -256,16 +257,25 @@ class Game(models.Model):
         #TODO: implement this method
         pass
 
-    def canUserJoinGame(self, user):
+    def isUserInGame(self, user):
         """
-        Checks whether a user can join the game or not
+        Checks whether a user is in the game or not
         :param user:
         :return: True if user can join game
         """
         try:
             player = Player.objects.get(currentGame__id=self.id, user__id=user.id)
         except:
-            return True
+            return False
+        return True
+
+    def isCharacterInGame(self, user):
+        """
+        Checks whether the character is being used in the game
+        :param user:
+        :return:
+        """
+        #TODO: implement this method
         return False
 
     def addPlayer(self, player):
@@ -273,11 +283,12 @@ class Game(models.Model):
         Adds a player to the game
         :param player: Player to be added
         """
-        if self.canUserJoinGame(player.user):
-            player.currentGame = self
-            player.save()
-        else:
-            raise PermissionError("User is already a player in this game")
+        if self.isUserInGame(player.user):
+            raise RuntimeError("User is already a player in this game")
+        elif self.isCharacterInGame(player.character):
+            raise RuntimeError("Character is already in use")
+        player.currentGame = self
+        player.save()
 
     def endGame(self, winningPlayer):
         """

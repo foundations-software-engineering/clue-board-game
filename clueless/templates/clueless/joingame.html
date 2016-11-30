@@ -30,7 +30,7 @@
             <div class="row">
                 <div class="col-lg-12">
                     <form class="form-startgame" action="{% url 'join_game_controller' %}" method="post">{% csrf_token %}
-                        <h2 class="form-startgame-heading">Start a New Game!</h2>
+                        <h2 class="form-startgame-heading">Join <i>{{ game.name }}</i> hosted by <i>{{ game.hostPlayer.user.username }}</i></h2>
 						<br/>
                         <input type="hidden" name="game_id" value="{{ game.id }}" />
                         <label for="character_id">Which Character would you like to be?</label>
