@@ -79,6 +79,6 @@ Setup default objects
 
 `docker-compose run web python manage.py create_default_objects`
 
-Ccreate a super user
+Create a super user
 
 `docker-compose run web python manage.py createsuperuser`
