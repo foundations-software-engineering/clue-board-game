@@ -67,3 +67,18 @@ CTRL + C
 
 ### Connect to a running container
 `# docker exec -it <containerIdOrName> bash`
+
+## Setting up Project for the first time....
+Build script to migrate to database and migrate.  Run these two whenever models.py is updated
+
+`docker-compose run web python manage.py makemigrations clueless`
+
+`docker-compose run web python manage.py migrate`
+
+Setup default objects
+
+`docker-compose run web python manage.py create_default_objects`
+
+Create a super user
+
+`docker-compose run web python manage.py createsuperuser`
