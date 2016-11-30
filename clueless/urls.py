@@ -25,6 +25,8 @@ urlpatterns = [
     url(r'^play/(?P<game_id>[0-9])/', views.playgame, name='playgame'),
     url(r'^playerturn/', views.playerturn, name='playerturn'),
     url(r'^startgame/', views.startgame, name='startgame'),
+    url(r'^joingame/(?P<game_id>[0-9])/', views.joingame, name='joingame'),
     url(r'^controllers/startgame/', views.start_game_controller, name='start_game_controller'),
+    url(r'^controllers/joingame/', views.join_game_controller, name='join_game_controller'),
     url(r'^$', views.index, name='index'),
 ]

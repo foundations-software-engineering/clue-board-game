@@ -240,6 +240,14 @@ class Game(models.Model):
         randCaseFile.save()
         self.caseFile = randCaseFile
 
+    def unusedCharacters(self):
+        """
+        Gets a query set of character objects that have not been taken by a player yet
+        :return:
+        """
+        #TODO: actually implement this method...
+        return Character.objects.all()
+
     def startGame(self):
         """
         Starts a game
@@ -248,13 +256,28 @@ class Game(models.Model):
         #TODO: implement this method
         pass
 
+    def canUserJoinGame(self, user):
+        """
+        Checks whether a user can join the game or not
+        :param user:
+        :return: True if user can join game
+        """
+        try:
+            player = Player.objects.get(currentGame__id=self.id, user__id=user.id)
+        except:
+            return True
+        return False
+
     def addPlayer(self, player):
         """
         Adds a player to the game
         :param player: Player to be added
         """
-        player.currentGame = self
-        player.save()
+        if self.canUserJoinGame(player.user):
+            player.currentGame = self
+            player.save()
+        else:
+            raise PermissionError("User is already a player in this game")
 
     def endGame(self, winningPlayer):
         """
