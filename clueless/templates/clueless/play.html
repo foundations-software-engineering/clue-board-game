@@ -20,9 +20,10 @@
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
   </head>
-  <body onload="init()">
-    <h1>Play ClueLess</h1>
-    <div class="container"> 
+  <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" onload="init()">
+
+    {% include "clueless/defaultNavbar.html" %}
+    <div class="container" style="margin-top:60px">
         <div class="row">
             <div class="col-md-12">
                 <canvas id="clueless" width="800" height="800"></canvas>
