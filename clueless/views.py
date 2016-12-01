@@ -94,7 +94,11 @@ def lobby(request):
 
 @login_required
 def startgame(request):
-	#return HttpResponse("Welcome to the game")
+	"""
+	Provides the UI for intializing a game
+	:param request:
+	:return:
+	"""
 	template = loader.get_template('clueless/startgame.html')
 	characterList = Character.objects.all().order_by('name')
 	context = {'chracterList':characterList}
@@ -102,6 +106,12 @@ def startgame(request):
 
 @login_required
 def joingame(request, game_id):
+	"""
+	provides the UI for joining a game
+	:param request:
+	:param game_id: game_id of a game that hasn't been started that the user is in
+	:return:
+	"""
 	template = loader.get_template('clueless/joingame.html')
 	#get game object
 	try:
@@ -119,6 +129,12 @@ def joingame(request, game_id):
 
 @login_required
 def begingame(request, game_id):
+	"""
+	Actually begins a game
+	:param request:
+	:param game_id: game_id of a game with more than 1 player, that hasn't started, that the user is the host of
+	:return:
+	"""
 	template = loader.get_template('clueless/begingame.html')
 	# get game object
 	try:
@@ -135,7 +151,12 @@ def begingame(request, game_id):
 
 @login_required
 def playgame(request, game_id):
-	#return HttpResponse("Welcome to the game")
+	"""
+	UI for playing the game
+	:param request:
+	:param game_id: game_id of a game at status Started
+	:return:
+	"""
 	template = loader.get_template('clueless/play.html')
 	game = Game.objects.get(id = game_id)
 	context = {"game":game}
@@ -185,8 +206,11 @@ def start_game_controller(request):
 	Creates a game with the given host defined by his/her user_id. Also provided
 	is the host's designated character. Other players may join later, as this
 	game is not available in the lobby as a joinable game.
+	:param request: POST request with character_id and game_name
+	:return:
 	"""
 	if request.method == 'POST':
+		#validate required fields are present
 		if 'character_id' not in request.POST:
 			logger.error('character_id not provided')
 			return redirect('startgame')
@@ -199,6 +223,7 @@ def start_game_controller(request):
 			character_id = request.POST.get('character_id')
 			game_name = request.POST.get('game_name')
 
+			#get character object
 			try:
 				character = Character.objects.get(card_id = character_id)
 			except ObjectDoesNotExist: # Possible User.DoesNotExist
@@ -213,6 +238,7 @@ def start_game_controller(request):
 			player = Player(user = user, character = character, currentSpace = character.defaultSpace)
 			player.save()
 
+			#initialize the game, save, add player, and redirect
 			game.initializeGame(player)
 			game.save()
 
@@ -220,7 +246,7 @@ def start_game_controller(request):
 			game.save()
 
 			# kewl, we are done now.  Let's send our user to the game interface
-			return redirect('playgame', game_id = game.id)
+			return redirect('begingame', game_id = game.id)
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
@@ -229,10 +255,11 @@ def join_game_controller(request):
 	"""
 	Adds a player to a game
 	Request should include a game_id and a character_id
-	:param request:
+	:param request: POST request with character_id and game_id
 	:return:
 	"""
 	if request.method == 'POST':
+		#validate necessary fields are present
 		if 'character_id' not in request.POST:
 			logger.error('character_id not provided')
 			return redirect('joingame')
@@ -242,9 +269,10 @@ def join_game_controller(request):
 		else:
 			#can get logged in user direct from request object
 			user = request.user
-			#get ids from post and attempt to lookup model objects
+			#get ids from post
 			character_id = request.POST.get('character_id')
 			game_id = request.POST.get('game_id')
+			#get object instances
 			try:
 				character = Character.objects.get(card_id = character_id)
 			except Character.DoesNotExist:
@@ -286,7 +314,7 @@ def join_game_controller(request):
 def begin_game_controller(request):
 	"""
 	Begins a game
-	:param request:
+	:param request: POST with game_id
 	:return:
 	"""
 	if request.method == 'POST':
