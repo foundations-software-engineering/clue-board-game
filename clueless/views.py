@@ -306,17 +306,7 @@ def begin_game_controller(request):
 				return redirect('begingame')
 
 			#check conditions, start game if conditions met
-			if game.status != 0:
-				logger.error('Game already started')
-				return redirect('begingame')
-			elif Player.objects.filter(currentGame__id = game.id).count() < 2:
-				logger.error('Game must have at least 2 players')
-				return redirect('begingame')
-			elif game.hostPlayer.user != request.user:
-				logger.error('Game can only be started by host')
-				return redirect('begingame')
-			else:
-				game.status = 1
+			game.startGame(request.user)
 			game.save()
 
 			# kewl, we are done now.  Let's send our user to the game interface

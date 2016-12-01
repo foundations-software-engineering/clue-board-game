@@ -246,16 +246,25 @@ class Game(models.Model):
         Gets a query set of character objects that have not been taken by a player yet
         :return:
         """
-        #TODO: actually implement this method...
-        return Character.objects.all()
+        usedCharacterIds = list()
+        listOPlayers = Player.objects.filter(currentGame__id = self.id)
+        for p in listOPlayers:
+            usedCharacterIds.append(p.character.card_id)
+        return Character.objects.exclude(card_id__in = usedCharacterIds)
 
-    def startGame(self):
+    def startGame(self, user):
         """
         Starts a game
-        :param playerHost: player that will be the host
+        :param user: user that will be the host
         """
-        #TODO: implement this method
-        pass
+        if self.status != 0:
+            raise RuntimeError('Game already started')
+        elif Player.objects.filter(currentGame__id=self.id).count() < 2:
+            raise RuntimeError('Game must have at least 2 players')
+        elif self.hostPlayer.user != user:
+            raise RuntimeError('Game can only be started by host')
+        else:
+            self.status = STARTED
 
     def isUserInGame(self, user):
         """
@@ -269,14 +278,13 @@ class Game(models.Model):
             return False
         return True
 
-    def isCharacterInGame(self, user):
+    def isCharacterInGame(self, character):
         """
         Checks whether the character is being used in the game
-        :param user:
+        :param character:
         :return:
         """
-        #TODO: implement this method
-        return False
+        return Player.objects.filter(currentGame__id = self.id, character__card_id = character.card_id).count() > 0
 
     def addPlayer(self, player):
         """
