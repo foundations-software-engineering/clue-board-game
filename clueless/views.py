@@ -118,6 +118,22 @@ def joingame(request, game_id):
 	return HttpResponse(template.render(context, request))
 
 @login_required
+def begingame(request, game_id):
+	template = loader.get_template('clueless/begingame.html')
+	# get game object
+	try:
+		game = Game.objects.get(id=game_id)
+	except Game.DoesNotExist:
+		return redirect('index')
+
+	#get a list of players currently in the game
+	players = Player.objects.filter(currentGame__id = game_id)
+	numOfPlayers = players.count()
+
+	context = {'game': game, 'players': players, 'numOfPlayers': numOfPlayers}
+	return HttpResponse(template.render(context, request))
+
+@login_required
 def playgame(request, game_id):
 	#return HttpResponse("Welcome to the game")
 	template = loader.get_template('clueless/play.html')
@@ -246,19 +262,67 @@ def join_game_controller(request):
 			player.save()
 
 			# adds user/player to game
-			if not game.isUserInGame(user):
-				game.addPlayer(player)
+			if game.status != 0:
+				logger.error('''Game already started''')
+				#if user is in game, go to game, otherwise go to lobby
+				if game.isUserInGame(user):
+					return redirect('playgame', game_id=game.id)
+				else:
+					return redirect('lobby')
+			elif game.isUserInGame(user):
+				logger.error('''User already in game''')
+				return redirect('begingame', game_id=game.id)
 			else:
-				logger.error('''user already in game''')
-				return redirect('playgame', game_id=game.id)
+				game.addPlayer(player)
+
+			game.save()
+
+			# kewl, we are done now.  Let's send our user to the game interface
+			return redirect('begingame', game_id = game.id)
+	else:
+		logger.error('POST expected, actual ' + request.method)
+
+@login_required
+def begin_game_controller(request):
+	"""
+	Begins a game
+	:param request:
+	:return:
+	"""
+	if request.method == 'POST':
+		if 'game_id' not in request.POST:
+			logger.error('game_id not provided')
+			return redirect('begingame')
+		else:
+			#can get logged in user direct from request object
+			user = request.user
+			#get ids from post and attempt to lookup model objects
+			game_id = request.POST.get('game_id')
+
+			try:
+				game = Game.objects.get(id = game_id)
+			except Game.DoesNotExist:
+				logger.error('''Game not found''')
+				return redirect('begingame')
+
+			#check conditions, start game if conditions met
+			if game.status != 0:
+				logger.error('Game already started')
+				return redirect('begingame')
+			elif Player.objects.filter(currentGame__id = game.id).count() < 2:
+				logger.error('Game must have at least 2 players')
+				return redirect('begingame')
+			elif game.hostPlayer.user != request.user:
+				logger.error('Game can only be started by host')
+				return redirect('begingame')
+			else:
+				game.status = 1
 			game.save()
 
 			# kewl, we are done now.  Let's send our user to the game interface
 			return redirect('playgame', game_id = game.id)
 	else:
 		logger.error('POST expected, actual ' + request.method)
-
-
 
 def make_suggestion(request):
 	"""
