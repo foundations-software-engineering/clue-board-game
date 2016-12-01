@@ -226,6 +226,7 @@ class Game(models.Model):
     startTime = models.DateTimeField(default = datetime.datetime.now, blank = True)
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
     hostPlayer = models.ForeignKey(Player)
+    name = models.CharField(max_length=60)
 
     def initializeGame(self, playerHost):
         """
@@ -240,6 +241,14 @@ class Game(models.Model):
         randCaseFile.save()
         self.caseFile = randCaseFile
 
+    def unusedCharacters(self):
+        """
+        Gets a query set of character objects that have not been taken by a player yet
+        :return:
+        """
+        #TODO: actually implement this method...
+        return Character.objects.all()
+
     def startGame(self):
         """
         Starts a game
@@ -248,11 +257,36 @@ class Game(models.Model):
         #TODO: implement this method
         pass
 
+    def isUserInGame(self, user):
+        """
+        Checks whether a user is in the game or not
+        :param user:
+        :return: True if user can join game
+        """
+        try:
+            player = Player.objects.get(currentGame__id=self.id, user__id=user.id)
+        except:
+            return False
+        return True
+
+    def isCharacterInGame(self, user):
+        """
+        Checks whether the character is being used in the game
+        :param user:
+        :return:
+        """
+        #TODO: implement this method
+        return False
+
     def addPlayer(self, player):
         """
         Adds a player to the game
         :param player: Player to be added
         """
+        if self.isUserInGame(player.user):
+            raise RuntimeError("User is already a player in this game")
+        elif self.isCharacterInGame(player.character):
+            raise RuntimeError("Character is already in use")
         player.currentGame = self
         player.save()
 

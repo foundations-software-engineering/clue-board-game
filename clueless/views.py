@@ -101,6 +101,23 @@ def startgame(request):
 	return HttpResponse(template.render(context,request))
 
 @login_required
+def joingame(request, game_id):
+	template = loader.get_template('clueless/joingame.html')
+	#get game object
+	try:
+		game = Game.objects.get(id = game_id)
+	except Game.DoesNotExist:
+		return redirect('index')
+	#check whether user is already in game, if so, go to play game
+	if game.isUserInGame(request.user):
+		return redirect('playgame', game_id = game.id)
+	#return a list of characters that haven't already been used in the game
+	characterList = game.unusedCharacters()
+
+	context = {'game':game, 'characterList': characterList}
+	return HttpResponse(template.render(context, request))
+
+@login_required
 def playgame(request, game_id):
 	#return HttpResponse("Welcome to the game")
 	template = loader.get_template('clueless/play.html')
@@ -157,10 +174,14 @@ def start_game_controller(request):
 		if 'character_id' not in request.POST:
 			logger.error('character_id not provided')
 			return redirect('startgame')
+		elif 'game_name' not in request.POST:
+			logger.error('game name not provided')
+			return redirect('startgame')
 		else:
 			#can get logged in user direct from request object
 			user = request.user
 			character_id = request.POST.get('character_id')
+			game_name = request.POST.get('game_name')
 
 			try:
 				character = Character.objects.get(card_id = character_id)
@@ -170,13 +191,10 @@ def start_game_controller(request):
 				return redirect('startgame')
 
 			# Constructs our game, saves the changes and starts it
-			game = Game()
+			game = Game(name = game_name)
 
 			# Create a Player object for the Host
-			player = Player()
-			player.user = user
-			player.character = character
-			player.currentSpace = character.defaultSpace
+			player = Player(user = user, character = character, currentSpace = character.defaultSpace)
 			player.save()
 
 			game.initializeGame(player)
@@ -189,6 +207,58 @@ def start_game_controller(request):
 			return redirect('playgame', game_id = game.id)
 	else:
 		logger.error('POST expected, actual ' + request.method)
+
+@login_required
+def join_game_controller(request):
+	"""
+	Adds a player to a game
+	Request should include a game_id and a character_id
+	:param request:
+	:return:
+	"""
+	if request.method == 'POST':
+		if 'character_id' not in request.POST:
+			logger.error('character_id not provided')
+			return redirect('joingame')
+		elif 'game_id' not in request.POST:
+			logger.error('game_id not provided')
+			return redirect('joingame')
+		else:
+			#can get logged in user direct from request object
+			user = request.user
+			#get ids from post and attempt to lookup model objects
+			character_id = request.POST.get('character_id')
+			game_id = request.POST.get('game_id')
+			try:
+				character = Character.objects.get(card_id = character_id)
+			except Character.DoesNotExist:
+				logger.error('''Character not found''')
+				return redirect('joingame')
+
+			try:
+				game = Game.objects.get(id = game_id)
+			except Game.DoesNotExist:
+				logger.error('''Game not found''')
+				return redirect('joingame')
+
+			#creates a player object for the new user
+			player = Player(user=user, character=character, currentSpace=character.defaultSpace)
+			player.save()
+
+			# adds user/player to game
+			if not game.isUserInGame(user):
+				game.addPlayer(player)
+			else:
+				logger.error('''user already in game''')
+				return redirect('playgame', game_id=game.id)
+			game.save()
+
+			# kewl, we are done now.  Let's send our user to the game interface
+			return redirect('playgame', game_id = game.id)
+	else:
+		logger.error('POST expected, actual ' + request.method)
+
+
 
 def make_suggestion(request):
 	"""

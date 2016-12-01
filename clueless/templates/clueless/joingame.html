@@ -29,15 +29,13 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
-                    <form class="form-startgame" action="{% url 'start_game_controller' %}" method="post">{% csrf_token %}
-                        <h2 class="form-startgame-heading">Start a New Game!</h2>
-                        <br/>
-                        <label for="game_name">Name the Game!</label>
-                            <input type="text" id="game_name" class="form-control" placeholder="Name this game..." name="game_name" required autofocus>
+                    <form class="form-startgame" action="{% url 'join_game_controller' %}" method="post">{% csrf_token %}
+                        <h2 class="form-startgame-heading">Join <i>{{ game.name }}</i> hosted by <i>{{ game.hostPlayer.user.username }}</i></h2>
 						<br/>
+                        <input type="hidden" name="game_id" value="{{ game.id }}" />
                         <label for="character_id">Which Character would you like to be?</label>
                             <select class="form-control" id="character_id"  placeholder="Plese Select a Character" name="character_id" required>
-								{% for c in chracterList %}
+								{% for c in characterList %}
 								<option value="{{ c.card_id }}">{{ c.name }}</option>
 								{% endfor %}
 							</select>
