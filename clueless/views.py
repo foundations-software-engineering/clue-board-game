@@ -85,7 +85,7 @@ def lobby(request):
 		gameIdList.append(p.currentGame.id)
 
 	#get all open, not started games that the current user could join
-	openGames = Game.objects.filter(status = 0).exclude(id__in = gameIdList)
+	openGames = Game.objects.filter(status__lt = 2).exclude(id__in = gameIdList)
 
 	#create context and render template
 	context = Context({'openGames':openGames, 'currentGames':currentGames})
