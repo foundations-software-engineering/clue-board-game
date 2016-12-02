@@ -25,7 +25,7 @@
     <div class="container"> 
         <div class="row">
             <div class="col-md-12">
-                <canvas id="clueless" width="800" height="800"></canvas>
+                <canvas id="clueless" width="900" height="900"></canvas>
             </div>
         </div>
     </div>
@@ -46,14 +46,18 @@
     <script src="https://code.createjs.com/preloadjs-0.6.2.min.js"></script>
 
     <script type="text/javascript">
-    //var img;
-	//var queue;
+    //Define the space locations from the database
+	var spaceLocations = [
+		{% for space in spaces %}
+		[{{space.id}},{{space.posX}},{{space.posY}}],
+		{% endfor %}
+	];
 
     function init() {
         //Load image background
         img = new Image();
         img.onload = loadImage;
-        img.src = "{% static 'clueless/images/FullTileGrid.png' %}";
+        img.src = "{% static 'clueless/images/GridBackground.png' %}";
     }
 
     function loadImage() {
@@ -63,25 +67,20 @@
         //Create stage to load image
         stage = new createjs.Stage(canvas);
 
-        var bmp = new createjs.Bitmap(img).set({scaleX: 0.66, scaleY: 0.66});
+		//Scale from 1500x1500 image
+        var bmp = new createjs.Bitmap(img).set({scaleX: 0.60, scaleY: 0.60});
         stage.addChild(bmp);
 
-        //Add characters
+        //Add local character - with movement options
         var scarlet = new createjs.Shape();
         scarlet.graphics.beginFill("Red").drawCircle(0,0,15);
         scarlet.x = 215;
         scarlet.y = 25;
         stage.addChild(scarlet);
         
+        //Add other players
         var white = new Player('White',560,25);
         stage.addChild(white.createGamePiece());
-
-		/*var green = new createjs.Shape();
-        green.graphics.beginFill("Green").drawCircle(0,0,15);
-        green.x = 435;
-        green.y = 25;
-        stage.addChild(green);*/
-
 
         //Add weapon
         var revolver = new createjs.Bitmap("{% static 'clueless/images/Revolver.png' %}");
@@ -91,17 +90,19 @@
 
         //Add Event Listener To Move Piece
         scarlet.on("pressmove", function(evt){
+        	//Get the targeted piece move
             evt.target.x = evt.stageX;
             evt.target.y = evt.stageY;
-
-            //console.log(evt.target.x);
             //Redraw the screen to show the change
             stage.update();
         });
 
         //Process drop and see if allowed
-        scarlet.on("pressup", function(evt) {            
-            getLocationFromCoordinates(evt.target.x, evt.target.y);
+        scarlet.on("pressup", function(evt) {    
+        	//Get desired landed space        
+            var targetSpace = getLocationFromCoordinates(evt.target.x, evt.target.y);
+            //TODO: send message to server
+            console.log('Send POST request: move player to '+targetSpace);  
         });
 
         //Draw frame

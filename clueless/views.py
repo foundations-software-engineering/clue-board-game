@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Board, Character, Game, Player, Room, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere
+from clueless.models import Accusation, Board, Character, Game, Player, Room, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -105,7 +105,8 @@ def playgame(request, game_id):
 	#return HttpResponse("Welcome to the game")
 	template = loader.get_template('clueless/play.html')
 	game = Game.objects.get(id = game_id)
-	context = {"game":game}
+	spaces = Space.objects.all().order_by('posY', 'posX')
+	context = {"game":game, "spaces":spaces}
 	return HttpResponse(template.render(context,request))
 
 @login_required
