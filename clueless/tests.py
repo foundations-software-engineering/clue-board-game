@@ -239,3 +239,7 @@ class GameModelTests(TestCase):
         self.assertEqual(self.g.isCharacterInGame(self.player1.character), True)
         self.assertEqual(self.g.isCharacterInGame(self.player2.character), True)
         self.assertEqual(self.g.isCharacterInGame(Character.objects.all()[3]), False)
+
+class WhoWhatWhereModelTests(TestCase):
+    #TODO: test compare methods
+    pass
