@@ -25,7 +25,6 @@ urlpatterns = [
     url(r'^logout/', views.logout, name='logout'),
     url(r'^play/(?P<game_id>\d+)/', views.playgame, name='playgame'),
     url(r'^startgame/', views.startgame, name='startgame'),
-    # url(r'^playerturn/',TemplateView.as_view(template_name="clueless/playerturn.html"),name='playerturn'),
     url(r'^playerturn/', views.playerturn, name='playerturn'),
     url(r'^joingame/(?P<game_id>\d+)/', views.joingame, name='joingame'),
     url(r'^begingame/(?P<game_id>\d+)/', views.begingame, name='begingame'),

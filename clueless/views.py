@@ -179,13 +179,9 @@ def playerturn(request):
 			
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
-				#TODO: actually redirect to accusation page, below code should work once that stuff is merged in
-				#template = loader.get_template('clueless/makeAccusation.html')
-				print("redirect to makeAccusation page")
+				template = loader.get_template('clueless/makeAccusation.html')
 			elif player_move == "makeSuggestion":
-				#TODO: actually redirect to suggestion page, below code should work once that stuff is merged in
-				#template = loader.get_template('clueless/makeSuggestion.html')w
-				print("redirect to makeSuggestion page")
+				template = loader.get_template('clueless/makeSuggestion.html')
 			elif player_move == "moveSpace":
 				#TODO: logic for confirming space is valid 
 				print("checking if player " + str(user_id) + " can move to " + new_position + " from " + str(player.currentSpace))
