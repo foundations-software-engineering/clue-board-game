@@ -1,6 +1,6 @@
 # Clue-Less the Board Game
 
-This repository is for the Johns Hopkins University course "Foundations of Software Enginerring", 605.401.
+This repository is for the Johns Hopkins University course "Foundations of Software Engineering", 605.401.
 
 ## Members
 * Jerrold Vincent
@@ -10,11 +10,9 @@ This repository is for the Johns Hopkins University course "Foundations of Softw
 
 ## Project Description
 
-An excerpt from the file "Clue-Less.pdf"
+An excerpt from the file "doc/Clue-Less.pdf"
 
-"This game is a simplified version of the popular board game, Clue®. The main simplification is
-in the navigation of the game board. In Clue-Less there are the same nine rooms, six weapons,
-and six people as in the board game. The rules are pretty much the same except for moving from room to room..."
+"This game is a simplified version of the popular board game, Clue®. The main simplification is in the navigation of the game board. In Clue-Less there are the same nine rooms, six weapons, and six people as in the board game. The rules are pretty much the same except for moving from room to room..."
 
 ## Technologies Used
 
@@ -22,8 +20,8 @@ Software Unchained has decided to create a web application using the following t
 
 * Django - Web framework
 * Postgres - Database
-* Javascript - Client side (Framework not yet determined)
-* Docker - Simply and maintain a similar work environment amongst the development team
+* Javascript - Client side
+* Docker - Simplifies and maintains a similar work environment amongst the development team
 
 ## Installation
 **Ensure settings_secret.py is in the "clueless" directory**
@@ -45,22 +43,32 @@ Mac needs to be installed using docker machine, and can be installed using the f
 * If installing  using this repository: follow steps 1-3,  and then step 9 when in the repo project directory
 Mac OSX guide is [here](https://howchoo.com/g/y2y1mtkznda/getting-started-with-docker-compose-and-django) .
 
+## First Time Setup
+Build script to migrate to database and migrate.
+
+**Run these two whenever models.py is updated**
+
+`$ docker-compose run web python manage.py makemigrations clueless`
+
+`$ docker-compose run web python manage.py migrate`
+
+Setup default objects
+
+`$ docker-compose run web python manage.py create_default_objects`
+
+Create a super user
+
+`$ docker-compose run web python manage.py createsuperuser`
+
+## Running
+Simply execute `$ ./run.sh`
+
+## Stopping
+To gracefully stop, a single `CTRL + C` command should be executed  
+
 ## Basic Docker Commands
 
 See `$ docker --help`
-
-### Compiling
-** This needs to be done whenever the Dockerfile, docker-compose.yml or Django src changes **
-
-*We should setup Django to auto load src changes for ease development*
-
-`docker-compose build`
-
-### Starting
-`docker-compose up`
-
-### Stopping
-CTRL + C
 
 ### Start up a container and connect to it
 `# docker run -it <containerIdOrName> bash`
