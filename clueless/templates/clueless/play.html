@@ -27,9 +27,11 @@
         <div class="row">
             <div class="col-md-12">
                 <canvas id="clueless" width="900" height="900"></canvas>
+                <iframe id="encoder_iframe" width="200" height="900" src="{% url 'playerturn' %}"></iframe>
             </div>
         </div>
     </div>
+
 
     <!-- jQuery -->
     <script src="{% static 'clueless/js/jquery.js' %}"></script>
