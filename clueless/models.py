@@ -333,6 +333,7 @@ class Game(models.Model):
         """
         #start gamestate dictionary, start adding fields
         gamestate = {}
+        gamestate['game_sequence'] = self.currentSequence
         gamestate['isHostPlayer'] = self.hostPlayer == player
         gamestate['hostplayer'] = {'player_id':self.hostPlayer.id, 'username': self.hostPlayer.user.username}
         gamestate['status'] = self.status
@@ -371,6 +372,7 @@ class Game(models.Model):
         """
         #TODO: implement this method
         self.registerGameUpdate()
+
 
 class DetectiveSheet(models.Model):
     """
