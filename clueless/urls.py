@@ -28,6 +28,7 @@ urlpatterns = [
     url(r'^playerturn/', views.playerturn, name='playerturn'),
     url(r'^joingame/(?P<game_id>\d+)/', views.joingame, name='joingame'),
     url(r'^begingame/(?P<game_id>\d+)/', views.begingame, name='begingame'),
+    url(r'^rest/gamestate/', views.gamestate, name='gamestate'),
     url(r'^controllers/startgame/', views.start_game_controller, name='start_game_controller'),
     url(r'^controllers/joingame/', views.join_game_controller, name='join_game_controller'),
     url(r'^controllers/begingame/', views.begin_game_controller, name='begin_game_controller'),
