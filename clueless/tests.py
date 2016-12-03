@@ -2,15 +2,85 @@ from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
 
-from clueless.models import Character, Game, Player
+from clueless.models import Card, Character, Game, Player, Room, Weapon
+
+class AAA_DBSetup(TestCase):
+    """
+    Sets up the database with default objects
+    """
+    @classmethod
+    def setUpClass(cls):
+        call_command('create_default_objects')
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    def test_dummy(self):
+        pass
+
+
+class CardModelTests(TestCase):
+
+    #begin tests
+    def test_compare_works_when_both_cards(self):
+        allCards = Card.objects.all()
+        for i in range(0, allCards.count()-1):
+            self.assertEqual(allCards[i].compare(allCards[i]), True)
+
+        self.assertEqual(allCards[1].compare(allCards[4]), False)
+        self.assertEqual(allCards[2].compare(allCards[3]), False)
+
+    def test_compare_works_when_one_not_cards(self):
+        character = Character.objects.all()[4]
+        cCard = Card.objects.get(card_id = character.card_id)
+        room = Room.objects.all()[3]
+        rCard = Card.objects.get(card_id = room.card_id)
+        weapon = Weapon.objects.all()[2]
+        wCard = Card.objects.get(card_id = weapon.card_id)
+
+        self.assertEqual(cCard.compare(character), True)
+        self.assertEqual(character.compare(cCard), True)
+        self.assertEqual(rCard.compare(room), True)
+        self.assertEqual(room.compare(rCard), True)
+        self.assertEqual(wCard.compare(weapon), True)
+        self.assertEqual(weapon.compare(wCard), True)
+        self.assertEqual(cCard.compare(weapon), False)
+        self.assertEqual(room.compare(cCard), False)
+
+    def test_compare_works_when_both_not_cards(self):
+        character1 = Character.objects.all()[4]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[4]
+        room1 = Room.objects.all()[3]
+        room2 = Room.objects.all()[1]
+        room3 = Room.objects.all()[3]
+        weapon1 = Weapon.objects.all()[2]
+        weapon2 = Weapon.objects.all()[5]
+        weapon3 = Weapon.objects.all()[2]
+
+        self.assertEqual(character1.compare(character3), True)
+        self.assertEqual(character3.compare(character1), True)
+        self.assertEqual(character2.compare(character3), False)
+        self.assertEqual(character2.compare(room1), False)
+
+
+        self.assertEqual(room1.compare(room3), True)
+        self.assertEqual(room3.compare(room1), True)
+        self.assertEqual(room2.compare(room3), False)
+        self.assertEqual(room2.compare(weapon1), False)
+
+
+        self.assertEqual(weapon1.compare(weapon3), True)
+        self.assertEqual(weapon3.compare(weapon1), True)
+        self.assertEqual(weapon2.compare(weapon3), False)
+        self.assertEqual(weapon2.compare(character1), False)
 
 
 class GameModelTests(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # create all default objects in the test database
-        call_command('create_default_objects')
         cls.user1 = User.objects.create_user('testuser1', 'a@a.com', 'testuser1Password')
         cls.user1.save()
         cls.user2 = User.objects.create_user('testuser2', 'a@a.com', 'testuser2Password')
