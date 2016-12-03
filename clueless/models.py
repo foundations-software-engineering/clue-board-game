@@ -15,17 +15,20 @@ STATUS_CHOICES = (
     (COMPLETE, 'Complete'),
 )
 
+
 class Board(models.Model):
     """
     Board object for the entire game.  Should be referenced by multiple games and space collections
     """
     pass
 
+
 class SpaceCollection(models.Model):
     """
     Any implementations should occupy a set of spaces on the board
     """
     board = models.ForeignKey(Board)
+
 
 class Space(models.Model):
     """
@@ -39,6 +42,7 @@ class Space(models.Model):
 
     def __str__(self):
         return("({},{})".format(self.posX, self.posY))
+
 
 class Player(models.Model):
     """
@@ -54,17 +58,20 @@ class Player(models.Model):
             self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
         ))
 
+
 class Hallway(SpaceCollection):
     """
     Hallway in the game
     """
     pass
 
+
 class SecretPassage(SpaceCollection):
     """
     Secret Passage in the game
     """
     pass
+
 
 class Card(models.Model):
     """
@@ -98,11 +105,13 @@ class Character(Card):
 	"""
     defaultSpace = models.ForeignKey(Space)
 
+
 class Weapon(Card):
     """
     Represents each weapon
 	"""
     pass
+
 
 class WhoWhatWhere(models.Model):
     """
@@ -128,6 +137,7 @@ class WhoWhatWhere(models.Model):
         return("character: {}, room: {}, weapon: {}".format(
             self.character.__str__(), self.room.__str__(), self.weapon.__str__()
         ))
+
 
 class Turn(models.Model):
     """
@@ -159,6 +169,7 @@ class Turn(models.Model):
         """
         pass
 
+
 class Action(models.Model):
     """
     Any player action a player can take during a turn
@@ -186,11 +197,13 @@ class Suggestion(Action):
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
 
+
 class Accusation(Action):
     """
     An accusation action taken by the player.  Either the player wins the game or they lose!
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
+
 
 class Move(Action):
     """
@@ -198,6 +211,7 @@ class Move(Action):
     """
     fromSpace = models.ForeignKey(Space, related_name='fromSpace')
     toSpace = models.ForeignKey(Space, related_name='toSpace')
+
 
 class CaseFile(WhoWhatWhere):
     """
@@ -216,6 +230,7 @@ class CaseFile(WhoWhatWhere):
         randCaseFile.weapon = Weapon.objects.all()[0]
         return(randCaseFile)
 
+
 class Game(models.Model):
     """
     Parent game object
@@ -227,6 +242,7 @@ class Game(models.Model):
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
     hostPlayer = models.ForeignKey(Player)
     name = models.CharField(max_length=60)
+    currentSequence = models.IntegerField(default = 0)
 
     def initializeGame(self, playerHost):
         """
@@ -240,6 +256,7 @@ class Game(models.Model):
         randCaseFile = CaseFile.createRandom()
         randCaseFile.save()
         self.caseFile = randCaseFile
+        self.registerGameUpdate()
 
     def unusedCharacters(self):
         """
@@ -265,6 +282,7 @@ class Game(models.Model):
             raise RuntimeError('Game can only be started by host')
         else:
             self.status = STARTED
+        self.registerGameUpdate()
 
     def isUserInGame(self, user):
         """
@@ -297,6 +315,46 @@ class Game(models.Model):
             raise RuntimeError("Character is already in use")
         player.currentGame = self
         player.save()
+        self.registerGameUpdate()
+
+    def registerGameUpdate(self):
+        """
+        Updates the last update time to now, and increments the current game sequence
+        """
+        self.lastUpdateTime = datetime.datetime.now()
+        self.currentSequence = self.currentSequence + 1
+        self.save()
+
+    def gameStateJSON(self, player):
+        """
+
+        :param player: Player we are rendering JSON for
+        :return: a JSON representation of the current game state
+        """
+        #start gamestate dictionary, start adding fields
+        gamestate = {}
+        gamestate['isHostPlayer'] = self.hostPlayer == player
+        gamestate['hostplayer'] = {'player_id':self.hostPlayer.id, 'username': self.hostPlayer.user.username}
+        gamestate['status'] = self.status
+
+        #develop a dictionary array of player status
+        playerstates = []
+        players = Player.objects.filter(currentGame = self)
+        for p in players:
+            c = p.character
+            s = p.currentSpace
+            pData = {
+                'player_id':p.id,
+                'username':p.user.username,
+                'character':{'character_id':c.card_id, 'character_name':c.name},
+                'currentSpace':{'space_id':s.id, 'posX':s.posX, 'posY':s.posY}
+            }
+
+            playerstates.append(pData)
+
+        gamestate['playerstates'] = playerstates
+
+        return gamestate
 
     def endGame(self, winningPlayer):
         """
@@ -304,7 +362,7 @@ class Game(models.Model):
         :param winningPlayer: Player who won
         """
         #TODO: implement this method
-        pass
+        self.registerGameUpdate()
 
     def loseGame(self, losingPlayer):
         """
@@ -312,7 +370,7 @@ class Game(models.Model):
         :param losingPlayer: Player who lost (bad accusation
         """
         #TODO: implement this method
-        pass
+        self.registerGameUpdate()
 
 class DetectiveSheet(models.Model):
     """
@@ -351,6 +409,7 @@ class DetectiveSheet(models.Model):
         """
         #TODO: implement this method
         pass
+
 
 class SheetItem(models.Model):
     """

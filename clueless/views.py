@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
 from clueless.models import Accusation, Board, Character, Game, Player, Room, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
@@ -199,6 +199,66 @@ def playerturn(request):
 
 
 	return HttpResponse(template.render(context,request))
+
+@login_required
+def gamestate(request):
+	"""
+	This view will do the following:
+
+	:param request: POST request, with the following fields: game_id, player_id, cached_game_seq
+	:return: If the gameState is the same as before, return {'changed':false}.Otherwise, render a JSON representation of the current game state
+	"""
+	#parse request
+	if request.method != 'POST':
+		logger.error('request is not a post request')
+		return HttpResponse(status=417, content="must be POST request")
+	#check for valid request parameters
+	elif 'game_id' not in request.POST:
+		logger.error('game_id not provided')
+		return HttpResponse(status = 417, content="game_id not provided")
+	elif 'player_id' not in request.POST:
+		logger.error('player_id not provided')
+		return HttpResponse(status = 417, content="player_id not provided")
+	elif 'cached_game_seq' not in request.POST:
+		logger.error('cached_game_seq not provided')
+		return HttpResponse(status = 417, content="cached_game_seq not provided")
+	elif 'cached_game_seq' not in request.POST:
+		logger.error('cached_game_seq not provided')
+		return HttpResponse(status = 417, content="cached_game_seq not provided")
+
+	game_id = request.POST.get('game_id')
+	player_id = request.POST.get('player_id')
+	cached_game_seq = int(request.POST.get('cached_game_seq'))
+	#get the object instances
+	try:
+		game = Game.objects.get(id = game_id)
+		player = Player.objects.get(id = player_id)
+	except Game.DoesNotExist:
+		logger.error('invalid game_id')
+		return HttpResponse(status = 422, content="invalid game_id")
+	except Player.DoesNotExist:
+		logger.error('invalid player_id')
+		return HttpResponse(status = 422, content='invalid player_id')
+
+	#user must be the same as the player, and must be in the game
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status = 403, content="logged in user does not match player_id")
+	elif player.currentGame != game:
+		logger.error('player is not in requested game')
+		return HttpResponse(status=403, content="player is not in requested game")
+
+	responseData = {}
+	#now, we can actually begin the view logic
+	if cached_game_seq == game.currentSequence:
+		#game has not been updated
+		responseData['changed'] = False
+	else:
+		responseData['changed'] = True
+		responseData['gamestate'] = game.gameStateJSON(player)
+
+	return JsonResponse(responseData)
+
 
 # Controller functions will go below here
 @login_required

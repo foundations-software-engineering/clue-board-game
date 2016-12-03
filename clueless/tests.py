@@ -1,8 +1,11 @@
 from django.contrib.auth.models import User
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import Client, TestCase
+from django.urls import reverse
+import json
 
 from clueless.models import Card, Character, Game, Player, Room, Weapon
+
 
 class AAA_DBSetup(TestCase):
     """
@@ -240,6 +243,212 @@ class GameModelTests(TestCase):
         self.assertEqual(self.g.isCharacterInGame(self.player2.character), True)
         self.assertEqual(self.g.isCharacterInGame(Character.objects.all()[3]), False)
 
+    def test_registerGameUpdate_increments_game_seq(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        seq = self.g.currentSequence
+        self.g.registerGameUpdate()
+        self.g.save()
+        self.assertEqual(seq + 1, self.g.currentSequence)
+
+    def test_gameStateJSON_isHostPlayer_true_when_hostplayer(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+
+        gsj = self.g.gameStateJSON(self.player1)
+        self.assertEqual(gsj['isHostPlayer'], True)
+
+    def test_gameStateJSON_isHostPlayer_false_when_not_hostplayer(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['isHostPlayer'], False)
+
+    def test_gameStateJSON_hostplayer_matches_hostplayer(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        gsj = self.g.gameStateJSON(self.player2)
+        hp = gsj['hostplayer']
+        self.assertEqual(hp['player_id'], self.player1.id)
+        self.assertEqual(hp['username'], self.player1.user.username)
+
+    def test_gameStateJSON_status_matches_game_status(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        self.g.status = 0
+        self.g.save()
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['status'], 0)
+
+        self.g.status = 1
+        self.g.save()
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['status'], 1)
+
+        self.g.status = 2
+        self.g.save()
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['status'], 2)
+
+
+    def test_gameStateJSON_playerstates_count_matches(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        self.g.addPlayer(self.player1)
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(len(gsj['playerstates']), 1)
+
+        self.g.addPlayer(self.player2)
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(len(gsj['playerstates']), 2)
+
+
 class WhoWhatWhereModelTests(TestCase):
     #TODO: test compare methods
     pass
+
+#tests for views
+
+class GameStateViewTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        #get client
+        cls.c = Client()
+        #build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        #build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+        cls.playerNotInGameAndNotUser = Player(user=cls.user3, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGameAndNotUser.save()
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+
+        cls.gsUrl = reverse('gamestate')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.playerNotInGameAndNotUser.delete()
+        cls.game1.delete()
+
+
+    def test_user_must_be_logged_in(self):
+        response = self.c.post(self.gsUrl, {})
+        self.assertRegex(response.url, 'login')
+
+    def test_not_post_not_allowed(self):
+        self.c.force_login(self.user1)
+        response = self.c.get(self.gsUrl)
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_no_parameters_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl, {})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_game_id_parameter_not_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'player_id': self.player1.id, 'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_player_id_parameter_not_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id, 'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_cached_game_seq_parameter_not_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl, {})
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id, 'player_id': self.player1.id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_bad_game_id(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': -1,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_player_id(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': -1,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_user_doesnt_match_player(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player2.id,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_player_not_in_game(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.playerNotInGame.id,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 403)
+
+    def test_changed_is_false_when_cache_matches(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': (self.game1.currentSequence)})
+        responseJSON = json.loads(response.content)
+        self.assertEqual(responseJSON['changed'], False)
+
+    def test_changed_is_true_when_cache_doesnt_match(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': (self.game1.currentSequence-1)})
+        responseJSON = json.loads(response.content)
+        self.assertEqual(responseJSON['changed'], True)
+
+    def test_gameStateJSON_present_when_cache_doesnt_match(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': (self.game1.currentSequence-1)})
+        responseJSON = json.loads(response.content)
+        self.assertIn('gamestate', responseJSON.keys())
