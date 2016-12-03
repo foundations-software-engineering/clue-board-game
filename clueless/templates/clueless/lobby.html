@@ -54,8 +54,11 @@
                                         <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Actions
                                         <span class="caret"></span></button>
                                         <ul class="dropdown-menu">
-                                        <li><a href="{% url 'playgame' cg.id %}">Open Game</a></li>
-                                        <li><a href="{% url 'playgame' cg.id %}">Start Game</a></li>
+                                            {% if cg.status == 0 %}
+                                            <li><a href="{% url 'begingame' cg.id %}">Begin Game</a></li>
+                                            {% else %}
+                                            <li><a href="{% url 'playgame' cg.id %}">Open Game</a></li>
+                                            {% endif %}
                                         </ul>
                                     </div>
                                 </td>
@@ -89,10 +92,12 @@
                                 <td>{{ og.get_status_display }}</td>
                                 <td>
                                     <div class="dropdown">
-                                        <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Actions
+                                        <button class="btn btn-primary dropdown-toggle {% if og.status != 0 %}disabled{% endif %}" type="button" data-toggle="dropdown">Actions
                                         <span class="caret"></span></button>
                                         <ul class="dropdown-menu">
-                                        <li><a href="{% url 'joingame' og.id %}">Join Game</a></li>
+                                            {% if og.status == 0 %}
+                                            <li><a href="{% url 'joingame' og.id %}">Join Game</a></li>
+                                            {% endif %}
                                         </ul>
                                     </div>
                                 </td>
