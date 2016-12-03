@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 import datetime
+import random
 
 """
 Implementation of status enum as a Django IntergerField of choices
@@ -223,11 +224,16 @@ class CaseFile(WhoWhatWhere):
         Static class method, to be used instead of constructor in most cases
         :return: CaseFile with random selections for room, character and weapon
         """
-        #TODO: actually write this function...
         randCaseFile = CaseFile()
-        randCaseFile.character = Character.objects.all()[0]
-        randCaseFile.room = Room.objects.all()[0]
-        randCaseFile.weapon = Weapon.objects.all()[0]
+        allChar = Character.objects.all()
+        charCnt = allChar.count()
+        allRoom = Room.objects.all()
+        roomCnt = allRoom.count()
+        allWeapon = Weapon.objects.all()
+        weaponCnt = allWeapon.count()
+        randCaseFile.character = allChar[random.randint(0, charCnt-1)]
+        randCaseFile.room = allRoom[random.randint(0, roomCnt-1)]
+        randCaseFile.weapon = allWeapon[random.randint(0, weaponCnt-1)]
         return(randCaseFile)
 
 

@@ -4,7 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 import json
 
-from clueless.models import Card, Character, Game, Player, Room, Weapon
+from clueless.models import Card, CaseFile, Character, Game, Player, Room, Weapon, WhoWhatWhere
 
 
 class AAA_DBSetup(TestCase):
@@ -78,6 +78,17 @@ class CardModelTests(TestCase):
         self.assertEqual(weapon3.compare(weapon1), True)
         self.assertEqual(weapon2.compare(weapon3), False)
         self.assertEqual(weapon2.compare(character1), False)
+
+
+class CaseFileModelTests(TestCase):
+
+    def test_createRandom_is_random(self):
+        #run createRandom 3 times, ensure WhoWhatWheres are not all equal (1 in 104,976 chance)
+        cf1 = CaseFile.createRandom()
+        cf2 = CaseFile.createRandom()
+        cf3 = CaseFile.createRandom()
+
+        self.assertEqual(cf1.compare(cf2) and cf1.compare(cf3) and cf2.compare(cf3), False)
 
 
 class GameModelTests(TestCase):
@@ -309,8 +320,77 @@ class GameModelTests(TestCase):
 
 
 class WhoWhatWhereModelTests(TestCase):
-    #TODO: test compare methods
-    pass
+
+    def test_compare_true_when_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), True)
+        self.assertEqual(www2.compare(www1), True)
+
+    def test_compare_false_when_all_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[1]
+        r2 = Room.objects.all()[5]
+        w2 = Weapon.objects.all()[3]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
+    def test_compare_false_when_character_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[1]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
+    def test_compare_false_when_room_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[2]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
+    def test_compare_false_when_weapon_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[3]
+        c2 = Character.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
 
 #tests for views
 
