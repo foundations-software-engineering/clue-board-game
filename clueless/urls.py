@@ -16,6 +16,7 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 from clueless import views
+from django.views.generic import TemplateView
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
@@ -23,8 +24,8 @@ urlpatterns = [
     url(r'^login/', views.login, name='login'),
     url(r'^logout/', views.logout, name='logout'),
     url(r'^play/(?P<game_id>\d+)/', views.playgame, name='playgame'),
-    url(r'^playerturn/', views.playerturn, name='playerturn'),
     url(r'^startgame/', views.startgame, name='startgame'),
+    url(r'^playerturn/',TemplateView.as_view(template_name="clueless/playerturn.html"),name='playerturn'),
     url(r'^joingame/(?P<game_id>\d+)/', views.joingame, name='joingame'),
     url(r'^begingame/(?P<game_id>\d+)/', views.begingame, name='begingame'),
     url(r'^controllers/startgame/', views.start_game_controller, name='start_game_controller'),
