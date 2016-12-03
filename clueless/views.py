@@ -222,9 +222,6 @@ def gamestate(request):
 	elif 'cached_game_seq' not in request.POST:
 		logger.error('cached_game_seq not provided')
 		return HttpResponse(status = 417, content="cached_game_seq not provided")
-	elif 'cached_game_seq' not in request.POST:
-		logger.error('cached_game_seq not provided')
-		return HttpResponse(status = 417, content="cached_game_seq not provided")
 
 	game_id = request.POST.get('game_id')
 	player_id = request.POST.get('player_id')
