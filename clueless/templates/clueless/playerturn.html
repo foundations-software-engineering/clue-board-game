@@ -1,80 +1,32 @@
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <title>Player Turn | ClueLess</title>
 
-    <!-- Bootstrap -->
-    <!-- Latest compiled and minified CSS -->
-    <!-- Bootstrap Core CSS -->
-    <link href="{% static 'clueless/css/bootstrap.min.css' %}"  rel="stylesheet">
+<form class="form-playerturn" action"" method="post">{%csrf_token%}
+	<h2 class="form-playerturn-heading">It is your turn! what is your move?</h2>
+	 <br>
+	  <label for="player_move">Select move:</label>
+		<select class="form-control" name="player_move" id="player_move">
+		  <option value="makeAccusation">Make an Accusation</option>
+		  <option value="makeSuggestion">Make a Suggestion</option>
+		  <option value="moveSpace">Move to a room</option>
+		</select>
+	<br>
+	<!--hard coded for now, but TODO: add JS to only display this if Move To was selected, also to exclude the current space-->
+	<br>
+	  <label for="new_position" id=new_position_label>Move to the:</label>
+		<select class="form-control" name="new_position" id="new_position">
+		  <option value="study">Study</option>
+		  <option value="hall">Hall</option>
+		  <option value="lounge">Lounge</option>
+		  <option value="library">Library</option>
+		  <option value="billiardRoom">Billiard Room</option>
+		  <option value="diningRoom">Dining Room</option>
+		  <option value="conservatory">Conservatory</option>
+		  <option value="ballroom">Ballroom</option>
+		  <option value="kitchen">Kitchen</option>
+		</select>
+	<br>
+<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
+</form>
 
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-  </head>
-  <body id="page-top" data-spy="scroll">
-  	<section id="intro" class="intro-section" style="margin-top:60px">
-  		<div class="container">
-  			<div class="row">
-  				<form class="form-playerturn" action"" method="post">{%csrf_token%}
-  					<h2 class="form-playerturn-heading">It is your turn! what is your move?</h2>
-  					 <br>
-  					  <label for="player_move">Select move:</label>
-				    	<select class="form-control" name="player_move" id="player_move">
-						  <option value="makeAccusation">Make an Accusation</option>
-						  <option value="makeSuggestion">Make a Suggestion</option>
-						  <option value="moveSpace">Move to a room</option>
-						</select>
-				    <br>
-				    <!--hard coded for now, but TODO: add JS to only display this if Move To was selected, also to exclude the current space-->
-				    <br>
-  					  <label for="new_position" id=new_position_label>Move to the:</label>
-				    	<select class="form-control" name="new_position" id="new_position">
-						  <option value="study">Study</option>
-						  <option value="hall">Hall</option>
-						  <option value="lounge">Lounge</option>
-						  <option value="library">Library</option>
-						  <option value="billiardRoom">Billiard Room</option>
-						  <option value="diningRoom">Dining Room</option>
-						  <option value="conservatory">Conservatory</option>
-						  <option value="ballroom">Ballroom</option>
-						  <option value="kitchen">Kitchen</option>
-						</select>
-				    <br>
-		    	<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
-  				</form>
-  			</div>
-  		</div>
-  	</section>
-
-	<!-- jQuery -->
-    <script src="{% static 'clueless/js/jquery.js' %}"></script>
-
-    <!-- Bootstrap Core JavaScript -->
-    <script src="{% static 'clueless/js/bootstrap.min.js' %}"></script>
-
-    <!-- Scrolling Nav JavaScript -->
-    <script src="{% static 'clueless/js/jquery.easing.min.js' %}"></script>
-
-    <!-- App Specific JS -->
-    <script src="{% static 'clueless/js/playerturn.js' %}"></script>
-
-    <script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
-    <script src="https://code.createjs.com/preloadjs-0.6.2.min.js"></script>
-
-    <script type="text/javascript">
-
-
-    $(document).ready(function(){
-
-    });
-    </script>
-	</body>
-</html>
+<!-- App Specific JS -->
+<script src="{% static 'clueless/js/playerturn.js' %}"></script>

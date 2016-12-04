@@ -1,15 +1,3 @@
-//Get canvas object
-	var canvasObject = document.getElementById('clueless');
-	//Get the height and width
-	var canvasHeight = canvasObject.height;
-	var canvasWidth = canvasObject.width;
-	//Get the equal blocks
-	var heightBlock = Math.floor(canvasHeight/5);
-	var widthBlock = Math.floor(canvasWidth/5);
-	//Determine coordinates of block
-	var droppedHeight = Math.floor(y/heightBlock)+1;
-	var droppedWidth = Math.floor(x/widthBlock)+1;
-
 function Player (color, x, y) {
 	//Declare instance variables
 	this.color = color;
@@ -33,7 +21,19 @@ function Player (color, x, y) {
 	}
 }
 
-function getLocationFromCoordinates(x, y){	
+function getLocationFromCoordinates(x, y){
+	//Get canvas object
+	var canvasObject = document.getElementById('clueless').getContext('2d');
+	//Get the height and width
+	var canvasHeight = canvasObject.canvas.height;
+	var canvasWidth = canvasObject.canvas.width;
+	//Get the equal blocks
+	var heightBlock = Math.floor(canvasHeight/5);
+	var widthBlock = Math.floor(canvasWidth/5);
+
+	//Determine coordinates of block
+	var droppedHeight = Math.floor(y/heightBlock)+1;
+	var droppedWidth = Math.floor(x/widthBlock)+1;
 	//Loop and find space by location
 	for(i=0; i<spaceLocations.length; i++){
 		//Check for a valid location
@@ -42,7 +42,6 @@ function getLocationFromCoordinates(x, y){
 		}
 	}
 }
-
 
 
 $(document).ready(function(){
