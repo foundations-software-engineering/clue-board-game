@@ -423,7 +423,6 @@ class Game(models.Model):
             self.id, self.name
         ))
 
-
 class DetectiveSheet(models.Model):
     """
     Detective Sheet a player fills out.  As card are discovered, a player checks off different cards as no longer

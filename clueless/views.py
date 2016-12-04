@@ -293,6 +293,7 @@ def gamestate(request):
 
 	return JsonResponse(responseData)
 
+
 # Controller functions will go below here
 @login_required
 def start_game_controller(request):

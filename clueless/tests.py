@@ -344,6 +344,17 @@ class GameModelTests(TestCase):
             Card.objects.all().count() - 3)
 
     def test_startGame_doesnt_deal_casefile_cards(self):
+
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.assertEqual(
+            SheetItem.objects.filter(detectiveSheet__game = self.g, checked = True, initiallyDealt = True).count(),
+            Card.objects.all().count() - 3)
+
+    def test_startGame_doesnt_deal_casefile_cards(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
