@@ -2,10 +2,10 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Board, Character, Game, Player, Room, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Board, Card, Character, Game, Player, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -60,7 +60,6 @@ def logout(request):
 	auth_logout(request)
 	logger.info('did we get here?')
 	return redirect('index')
-
 
 @login_required
 def lobby(request):
@@ -157,17 +156,27 @@ def playgame(request, game_id):
 	:param game_id: game_id of a game at status Started
 	:return:
 	"""
-	template = loader.get_template('clueless/play.html')
-	game = Game.objects.get(id = game_id)
+
+	try:
+		game = Game.objects.get(id = game_id)
+		player = Player.objects.get(user=request.user, currentGame=game)
+	except Game.DoesNotExist:
+		logger.error("Requested game_id doesn't exist")
+		return HttpResponse(status=422, content="Requested game doesn't exist")
+	except Player.DoesNotExist:
+		logger.error("User does not have a player in this game")
+		return HttpResponse(status=422, content="You are not a player in this game")
+
+	if game.status == 0: #redirect to begingame lobby
+		return redirect('begingame', game_id = game_id)
+
 	spaces = Space.objects.all().order_by('posY', 'posX')
-	context = {"game":game, "spaces":spaces}
+	context = {"game":game, "player":player, "spaces":spaces}
+	template = loader.get_template('clueless/play.html')
 	return HttpResponse(template.render(context,request))
 
 @login_required
 def playerturn(request):
-	template = loader.get_template('clueless/playerturn.html')
-	context = {}
-
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
 			#store variables for easier usage
@@ -190,8 +199,100 @@ def playerturn(request):
 			#logger.error('user_id or player_move not provided')
 			print('user_id or player_move not provided')
 
-
+	template = loader.get_template('clueless/playerturn.html')
+	context = {}
 	return HttpResponse(template.render(context,request))
+
+@login_required
+def detectivesheet(request, game_id, player_id):
+	"""
+	:param request:
+	:param game_id: game_id of a game at status Started
+	:param player_id: player_id of logged in player
+	:return:
+	"""
+	try:
+		game = Game.objects.get(id = game_id)
+		player = Player.objects.get(id = player_id, currentGame = game)
+	except Game.DoesNotExist:
+		logger.error("Requested game_id doesn't exist")
+		return HttpResponse(status=422, content="Requested game doesn't exist")
+	except Player.DoesNotExist:
+		logger.error("Requested player_id doesn't exist or is not part of this game")
+		return HttpResponse(status=422, content="Requested player_id doesn't exist or is not part of this game")
+
+	#check for permissions
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status = 403, content="logged in user does not match player_id")
+
+	#get all of the sheet items for the player
+	ds = player.getDetectiveSheet()
+
+	template = loader.get_template('clueless/detectivesheet.html')
+	context = {
+		'characterSheetItems': ds.getCharacterSheetItems(),
+		'roomSheetItems':ds.getRoomSheetItems(),
+		'weaponSheetItems': ds.getWeaponSheetItems()
+	}
+	return HttpResponse(template.render(context, request))
+
+@login_required
+def gamestate(request):
+	"""
+	This view will do the following:
+
+	:param request: POST request, with the following fields: game_id, player_id, cached_game_seq
+	:return: If the gameState is the same as before, return {'changed':false}.Otherwise, render a JSON representation of the current game state
+	"""
+	#parse request
+	if request.method != 'POST':
+		logger.error('request is not a post request')
+		return HttpResponse(status=417, content="must be POST request")
+	#check for valid request parameters
+	elif 'game_id' not in request.POST:
+		logger.error('game_id not provided')
+		return HttpResponse(status = 417, content="game_id not provided")
+	elif 'player_id' not in request.POST:
+		logger.error('player_id not provided')
+		return HttpResponse(status = 417, content="player_id not provided")
+	elif 'cached_game_seq' not in request.POST:
+		logger.error('cached_game_seq not provided')
+		return HttpResponse(status = 417, content="cached_game_seq not provided")
+
+	game_id = request.POST.get('game_id')
+	player_id = request.POST.get('player_id')
+	cached_game_seq = int(request.POST.get('cached_game_seq'))
+	#get the object instances
+	try:
+		game = Game.objects.get(id = game_id)
+		player = Player.objects.get(id = player_id)
+	except Game.DoesNotExist:
+		logger.error('invalid game_id')
+		return HttpResponse(status = 422, content="invalid game_id")
+	except Player.DoesNotExist:
+		logger.error('invalid player_id')
+		return HttpResponse(status = 422, content='invalid player_id')
+
+	#user must be the same as the player, and must be in the game
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status = 403, content="logged in user does not match player_id")
+	elif player.currentGame != game:
+		logger.error('player is not in requested game')
+		return HttpResponse(status=403, content="player is not in requested game")
+
+	responseData = {}
+	#now, we can actually begin the view logic
+	if cached_game_seq == game.currentSequence:
+		#game has not been updated
+		responseData['changed'] = False
+	else:
+		responseData['changed'] = True
+		responseData['gamestate'] = game.gameStateJSON(player)
+
+	return JsonResponse(responseData)
+
 
 # Controller functions will go below here
 @login_required
@@ -381,7 +482,6 @@ def make_suggestion(request):
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
-
 def make_accusation(request):
 	"""
 	Creates a accusation that is composed of a character, weapon and room.
@@ -426,3 +526,53 @@ def make_accusation(request):
 			accusation.whoWhatWhere = whoWhatWhere
 	else:
 		logger.error('POST expected, actual ' + request.method)
+
+def manualsheetitemcheck(request, game_id, player_id):
+	"""
+	This view manually checks off a sheet item for a given player
+	:param request: POST, includes int field "check" and "card_id"
+	:param game_id:
+	:param player_id:
+	:return:
+	"""
+	# parse request
+	if request.method != 'POST':
+		logger.error('request is not a post request')
+		return HttpResponse(status=417, content="must be POST request")
+	# check for valid request parameters
+	elif 'card_id' not in request.POST:
+		logger.error('card_id not provided')
+		return HttpResponse(status=417, content="card_id not provided")
+	elif 'check' not in request.POST:
+		logger.error('check not provided')
+		return HttpResponse(status=417, content="check not provided")
+
+	card_id = request.POST.get("card_id")
+
+	# get the object instances
+	try:
+		game = Game.objects.get(id=game_id)
+		player = Player.objects.get(id=player_id)
+		card = Card.objects.get(card_id = card_id)
+	except Game.DoesNotExist:
+		logger.error('invalid game_id')
+		return HttpResponse(status=422, content="invalid game_id")
+	except Player.DoesNotExist:
+		logger.error('invalid player_id')
+		return HttpResponse(status=422, content='invalid player_id')
+	except Card.DoesNotExist:
+		logger.error('invalid card')
+		return HttpResponse(status=422, content='invalid card')
+
+	# user must be the same as the player, must be in the game, and sheet item must belong to player
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status=403, content="logged in user does not match player_id")
+	elif player.currentGame != game:
+		logger.error('player is not in requested game')
+		return HttpResponse(status=403, content="player is not in requested game")
+
+	check = int(request.POST.get("check"))
+	player.getDetectiveSheet().makeNote(card, check > 0, manuallyChecked = True)
+
+	return HttpResponse(status = 200)

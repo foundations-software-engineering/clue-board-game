@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 import datetime
+import random
 
 """
 Implementation of status enum as a Django IntergerField of choices
@@ -15,17 +16,20 @@ STATUS_CHOICES = (
     (COMPLETE, 'Complete'),
 )
 
+
 class Board(models.Model):
     """
     Board object for the entire game.  Should be referenced by multiple games and space collections
     """
     pass
 
+
 class SpaceCollection(models.Model):
     """
     Any implementations should occupy a set of spaces on the board
     """
     board = models.ForeignKey(Board)
+
 
 class Space(models.Model):
     """
@@ -39,6 +43,7 @@ class Space(models.Model):
 
     def __str__(self):
         return("({},{})".format(self.posX, self.posY))
+
 
 class Player(models.Model):
     """
@@ -54,17 +59,27 @@ class Player(models.Model):
             self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
         ))
 
+    def getDetectiveSheet(self):
+        """
+
+        :return: The player's detective sheet for the current game
+        """
+        return DetectiveSheet.objects.get(game = self.currentGame, player = self)
+
+
 class Hallway(SpaceCollection):
     """
     Hallway in the game
     """
     pass
 
+
 class SecretPassage(SpaceCollection):
     """
     Secret Passage in the game
     """
     pass
+
 
 class Card(models.Model):
     """
@@ -98,11 +113,13 @@ class Character(Card):
 	"""
     defaultSpace = models.ForeignKey(Space)
 
+
 class Weapon(Card):
     """
     Represents each weapon
 	"""
     pass
+
 
 class WhoWhatWhere(models.Model):
     """
@@ -128,6 +145,7 @@ class WhoWhatWhere(models.Model):
         return("character: {}, room: {}, weapon: {}".format(
             self.character.__str__(), self.room.__str__(), self.weapon.__str__()
         ))
+
 
 class Turn(models.Model):
     """
@@ -159,6 +177,7 @@ class Turn(models.Model):
         """
         pass
 
+
 class Action(models.Model):
     """
     Any player action a player can take during a turn
@@ -186,11 +205,13 @@ class Suggestion(Action):
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
 
+
 class Accusation(Action):
     """
     An accusation action taken by the player.  Either the player wins the game or they lose!
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
+
 
 class Move(Action):
     """
@@ -198,6 +219,7 @@ class Move(Action):
     """
     fromSpace = models.ForeignKey(Space, related_name='fromSpace')
     toSpace = models.ForeignKey(Space, related_name='toSpace')
+
 
 class CaseFile(WhoWhatWhere):
     """
@@ -209,12 +231,18 @@ class CaseFile(WhoWhatWhere):
         Static class method, to be used instead of constructor in most cases
         :return: CaseFile with random selections for room, character and weapon
         """
-        #TODO: actually write this function...
         randCaseFile = CaseFile()
-        randCaseFile.character = Character.objects.all()[0]
-        randCaseFile.room = Room.objects.all()[0]
-        randCaseFile.weapon = Weapon.objects.all()[0]
+        allChar = Character.objects.all()
+        charCnt = allChar.count()
+        allRoom = Room.objects.all()
+        roomCnt = allRoom.count()
+        allWeapon = Weapon.objects.all()
+        weaponCnt = allWeapon.count()
+        randCaseFile.character = allChar[random.randint(0, charCnt-1)]
+        randCaseFile.room = allRoom[random.randint(0, roomCnt-1)]
+        randCaseFile.weapon = allWeapon[random.randint(0, weaponCnt-1)]
         return(randCaseFile)
+
 
 class Game(models.Model):
     """
@@ -227,6 +255,7 @@ class Game(models.Model):
     lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
     hostPlayer = models.ForeignKey(Player)
     name = models.CharField(max_length=60)
+    currentSequence = models.IntegerField(default = 0)
 
     def initializeGame(self, playerHost):
         """
@@ -240,6 +269,7 @@ class Game(models.Model):
         randCaseFile = CaseFile.createRandom()
         randCaseFile.save()
         self.caseFile = randCaseFile
+        self.registerGameUpdate()
 
     def unusedCharacters(self):
         """
@@ -257,6 +287,7 @@ class Game(models.Model):
         Starts a game
         :param user: user that will be the host
         """
+
         if self.status != 0:
             raise RuntimeError('Game already started')
         elif Player.objects.filter(currentGame__id=self.id).count() < 2:
@@ -265,6 +296,34 @@ class Game(models.Model):
             raise RuntimeError('Game can only be started by host')
         else:
             self.status = STARTED
+
+        #get all of the games detective sheets
+        detectiveSheetsQS = DetectiveSheet.objects.filter(game = self)
+        #flatten/ not sure why I have to do this, but otherwise the indexing later doesn't work
+        detectiveSheets = list()
+        for ds in detectiveSheetsQS:
+            detectiveSheets.append(ds)
+
+        #get all cards that ARE NOT in the casefile
+        cards = Card.objects.exclude(
+            card_id = self.caseFile.character.card_id).exclude(
+            card_id = self.caseFile.room.card_id).exclude(
+            card_id = self.caseFile.weapon.card_id)
+
+        #add these cards to a list, then shuffle
+        cardList = list()
+        for c in cards:
+            cardList.append(c)
+
+        random.shuffle(cardList)
+
+        #deal the cards into each detective sheet
+        for i in range(0, len(cardList)):
+            dsIndex = i % len(detectiveSheets)
+            detectiveSheets[dsIndex].makeNote(cardList[i], True, True)
+
+        self.save()
+        self.registerGameUpdate()
 
     def isUserInGame(self, user):
         """
@@ -297,6 +356,51 @@ class Game(models.Model):
             raise RuntimeError("Character is already in use")
         player.currentGame = self
         player.save()
+        #give player a detective sheet
+        ds = DetectiveSheet(game = self, player = player)
+        ds.save()
+        ds.addDefaultSheets()
+        self.registerGameUpdate()
+
+    def registerGameUpdate(self):
+        """
+        Updates the last update time to now, and increments the current game sequence
+        """
+        self.lastUpdateTime = datetime.datetime.now()
+        self.currentSequence = self.currentSequence + 1
+        self.save()
+
+    def gameStateJSON(self, player):
+        """
+
+        :param player: Player we are rendering JSON for
+        :return: a JSON representation of the current game state
+        """
+        #start gamestate dictionary, start adding fields
+        gamestate = {}
+        gamestate['game_sequence'] = self.currentSequence
+        gamestate['isHostPlayer'] = self.hostPlayer == player
+        gamestate['hostplayer'] = {'player_id':self.hostPlayer.id, 'username': self.hostPlayer.user.username}
+        gamestate['status'] = self.status
+
+        #develop a dictionary array of player status
+        playerstates = []
+        players = Player.objects.filter(currentGame = self)
+        for p in players:
+            c = p.character
+            s = p.currentSpace
+            pData = {
+                'player_id':p.id,
+                'username':p.user.username,
+                'character':{'character_id':c.card_id, 'character_name':c.name},
+                'currentSpace':{'space_id':s.id, 'posX':s.posX, 'posY':s.posY}
+            }
+
+            playerstates.append(pData)
+
+        gamestate['playerstates'] = playerstates
+
+        return gamestate
 
     def endGame(self, winningPlayer):
         """
@@ -304,7 +408,7 @@ class Game(models.Model):
         :param winningPlayer: Player who won
         """
         #TODO: implement this method
-        pass
+        self.registerGameUpdate()
 
     def loseGame(self, losingPlayer):
         """
@@ -312,7 +416,12 @@ class Game(models.Model):
         :param losingPlayer: Player who lost (bad accusation
         """
         #TODO: implement this method
-        pass
+        self.registerGameUpdate()
+
+    def __str__(self):
+        return ("id: {}, name: {}".format(
+            self.id, self.name
+        ))
 
 class DetectiveSheet(models.Model):
     """
@@ -322,35 +431,70 @@ class DetectiveSheet(models.Model):
     game = models.ForeignKey(Game)
     player = models.ForeignKey(Player)
 
-    def getRoomsLeft(self):
-        """
-        :return: Set of Room object that a player has not yet checked off
-        """
-        #TODO: implement this method
-        return(None)
+    def __getCheckedCardIds(self):
+        checkedSI = SheetItem.objects.filter(detectiveSheet = self, checked = True)
+        checkedIds = list()
+        for si in checkedSI:
+            checkedIds.append(si.card.card_id)
+
+        return checkedIds
+
+    def addDefaultSheets(self):
+        for c in Card.objects.all():
+            si = SheetItem(detectiveSheet=self, card=c, checked=False, initiallyDealt=False)
+            si.save()
 
     def getCharactersLeft(self):
         """
         :return: Set of Character objects that a player has not yet checked off
         """
-        # TODO: implement this method
-        return (None)
+        return (Character.objects.exclude(card_id__in=self.__getCheckedCardIds()))
+
+    def getCharacterSheetItems(self):
+        """
+        :return: QuerySet of all sheet items relating to a character
+        """
+        charIds = Character.objects.all().values_list('card_id', flat=True)
+        return SheetItem.objects.filter(detectiveSheet = self,  card__card_id__in=charIds).order_by("card__name")
+
+    def getRoomsLeft(self):
+        """
+        :return: Set of Room object that a player has not yet checked off
+        """
+        return (Room.objects.exclude(card_id__in=self.__getCheckedCardIds()))
+
+    def getRoomSheetItems(self):
+        """
+        :return: QuerySet of all sheet items relating to a room
+        """
+        roomIds = Room.objects.all().values_list('card_id', flat=True)
+        return SheetItem.objects.filter(detectiveSheet = self,  card__card_id__in=roomIds).order_by("card__name")
 
     def getWeaponsLeft(self):
         """
         :return: Set of Weapon objects that a player has not yet checked off
         """
-        # TODO: implement this method
-        return (None)
+        return (Weapon.objects.exclude(card_id__in = self.__getCheckedCardIds()))
 
-    def makeNote(self, card, checked):
+    def getWeaponSheetItems(self):
+        """
+        :return: QuerySet of all sheet items relating to a weapon
+        """
+        weaponIds = Weapon.objects.all().values_list('card_id', flat=True)
+        return SheetItem.objects.filter(detectiveSheet = self,  card__card_id__in=weaponIds ).order_by("card__name")
+
+    def makeNote(self, card, checked, initiallyDealt = False, manuallyChecked = False):
         """
         Notes whether a player has checked off a particular card or not
         :param card: Card that is being checked off
         :param checked: boolean whether to check or uncheck
         """
-        #TODO: implement this method
-        pass
+        si = SheetItem.objects.get(detectiveSheet = self, card = card)
+        si.checked = checked
+        si.initiallyDealt = initiallyDealt
+        si.manuallyChecked = manuallyChecked
+        si.save()
+
 
 class SheetItem(models.Model):
     """
@@ -358,4 +502,11 @@ class SheetItem(models.Model):
     """
     detectiveSheet = models.ForeignKey(DetectiveSheet)
     card = models.ForeignKey(Card)
-    checked = models.BooleanField
+    checked = models.BooleanField(default = False)
+    initiallyDealt = models.BooleanField(default = False)
+    manuallyChecked = models.BooleanField(default = False)
+
+    def __str__(self):
+        return ("user: {}, game: [{}], card: {}, checked: {}".format(
+            self.detectiveSheet.player.user.__str__(), self.detectiveSheet.game.__str__(), self.card.__str__(), self.checked.__str__()
+        ))

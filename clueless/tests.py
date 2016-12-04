@@ -1,8 +1,11 @@
 from django.contrib.auth.models import User
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import Client, TestCase
+from django.urls import reverse
+import json
 
-from clueless.models import Card, Character, Game, Player, Room, Weapon
+from clueless.models import Card, CaseFile, Character, DetectiveSheet, Game, Player, Room, SheetItem, Weapon, WhoWhatWhere
+
 
 class AAA_DBSetup(TestCase):
     """
@@ -77,6 +80,162 @@ class CardModelTests(TestCase):
         self.assertEqual(weapon2.compare(character1), False)
 
 
+class CaseFileModelTests(TestCase):
+
+    def test_createRandom_is_random(self):
+        #run createRandom 3 times, ensure WhoWhatWheres are not all equal (1 in 104,976 chance)
+        cf1 = CaseFile.createRandom()
+        cf2 = CaseFile.createRandom()
+        cf3 = CaseFile.createRandom()
+
+        self.assertEqual(cf1.compare(cf2) and cf1.compare(cf3) and cf2.compare(cf3), False)
+
+
+class DetectiveSheetTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        #build users
+        cls.user1 = User.objects.create_user('detectiveSheetUser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('detectiveSheetUser2', 'a@a.com', 'password')
+        cls.user2.save()
+
+        #build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+
+        cls.g = Game()
+        cls.g.initializeGame(cls.player1)
+        cls.g.save()
+        cls.g.addPlayer(cls.player1)
+        cls.g.addPlayer(cls.player2)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.g.delete()
+
+    def test_makeNote_initial_deal(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[3]
+        ds.makeNote(c, True, True)
+
+        si = SheetItem.objects.get(detectiveSheet = ds, card = c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.initiallyDealt, True)
+
+    def test_makeNote_after_initial_deal(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[6]
+        ds.makeNote(c, True)
+
+        si = SheetItem.objects.get(detectiveSheet = ds, card = c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.initiallyDealt, False)
+
+    def test_makeNote_uncheck(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[6]
+        ds.makeNote(c, True)
+        ds.makeNote(c, False)
+
+        si = SheetItem.objects.get(detectiveSheet=ds, card=c)
+        self.assertEqual(si.checked, False)
+        self.assertEqual(si.initiallyDealt, False)
+
+    def test_getCharactersLeft_works_no_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        charsLeft = ds.getCharactersLeft()
+        self.assertEqual(charsLeft.count(), Character.objects.all().count())
+
+    def test_getCharactersLeft_works_some_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        c1 = Character.objects.all()[0]
+        c2 = Character.objects.all()[3]
+        ds.makeNote(c1, True)
+        ds.makeNote(c2, True)
+
+        charsLeft = ds.getCharactersLeft()
+        self.assertEqual(charsLeft.count(), Character.objects.all().count() - 2)
+        self.assertNotIn(c1, charsLeft)
+        self.assertNotIn(c2, charsLeft)
+
+    def test_getCharactersLeft_works_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        charList = Character.objects.all()
+        for c in charList:
+            ds.makeNote(c, True)
+
+        charsLeft = ds.getCharactersLeft()
+        self.assertEqual(charsLeft.count(), 0)
+        for c in charList:
+            self.assertNotIn(c, charsLeft)
+
+    def test_getWeaponsLeft_works_no_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        weaponsLeft = ds.getWeaponsLeft()
+        self.assertEqual(weaponsLeft.count(), Weapon.objects.all().count())
+
+    def test_getWeaponsLeft_works_some_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        w1 = Weapon.objects.all()[0]
+        w2 = Weapon.objects.all()[3]
+        ds.makeNote(w1, True)
+        ds.makeNote(w2, True)
+
+        weaponsLeft = ds.getWeaponsLeft()
+        self.assertEqual(weaponsLeft.count(), Weapon.objects.all().count() - 2)
+        self.assertNotIn(w1, weaponsLeft)
+        self.assertNotIn(w2, weaponsLeft)
+
+    def test_getWeaponsLeft_works_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        weaponList = Weapon.objects.all()
+        for w in weaponList:
+            ds.makeNote(w, True)
+
+        weaponsLeft = ds.getWeaponsLeft()
+        self.assertEqual(weaponsLeft.count(), 0)
+        for w in weaponList:
+            self.assertNotIn(w, weaponsLeft)
+
+    def test_getRoomsLeft_works_no_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        roomsLeft = ds.getRoomsLeft()
+        self.assertEqual(roomsLeft.count(), Room.objects.all().count())
+
+    def test_getRoomsLeft_works_some_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        r1 = Room.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        ds.makeNote(r1, True)
+        ds.makeNote(r2, True)
+
+        roomsLeft = ds.getRoomsLeft()
+        self.assertEqual(roomsLeft.count(), Room.objects.all().count() - 2)
+        self.assertNotIn(r1, roomsLeft)
+        self.assertNotIn(r2, roomsLeft)
+
+    def test_getRoomsLeft_works_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        roomList = Room.objects.all()
+        for r in roomList:
+            ds.makeNote(r, True)
+
+        roomsLeft = ds.getRoomsLeft()
+        self.assertEqual(roomsLeft.count(), 0)
+        for r in roomList:
+            self.assertNotIn(r, roomsLeft)
+
+
 class GameModelTests(TestCase):
 
     @classmethod
@@ -137,42 +296,109 @@ class GameModelTests(TestCase):
         with self.assertRaises(RuntimeError):
             self.g.addPlayer(newPlayer)
 
-    def test_beginGame_raise_error_with_no_players(self):
+    def test_startGame_raise_error_with_no_players(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player1)
+            self.g.startGame(self.user1)
 
-    def test_beginGame_raise_error_with_one_player(self):
+    def test_startGame_raise_error_with_one_player(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player1)
+            self.g.startGame(self.user1)
 
-    def test_beginGame_raise_error_with_wrong_host(self):
+    def test_startGame_raise_error_with_wrong_host(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         self.g.addPlayer(self.player2)
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player2)
+            self.g.startGame(self.user2)
 
-    def test_beginGame_raise_error_when_already_started(self):
+    def test_startGame_raise_error_when_already_started(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         self.g.addPlayer(self.player2)
         self.g.status = 1
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player1)
+            self.g.startGame(self.user1)
 
-    def test_beginGame_works_with_2_players(self):
+    def test_startGame_works_with_2_players(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+    def test_startGame_deals_all_remaining_cards(self):
+        self.g.initializeGame(self.player1)
         self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.assertEqual(
+            SheetItem.objects.filter(detectiveSheet__game = self.g, checked = True, initiallyDealt = True).count(),
+            Card.objects.all().count() - 3)
+
+    def test_startGame_doesnt_deal_casefile_cards(self):
+
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.assertEqual(
+            SheetItem.objects.filter(detectiveSheet__game = self.g, checked = True, initiallyDealt = True).count(),
+            Card.objects.all().count() - 3)
+
+    def test_startGame_doesnt_deal_casefile_cards(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.assertEqual(
+            SheetItem.objects.filter(
+                detectiveSheet__game = self.g,
+                checked = True,
+                initiallyDealt = True,
+                card = self.g.caseFile.character).count(),
+            0)
+        self.assertEqual(
+            SheetItem.objects.filter(
+                detectiveSheet__game=self.g,
+                checked=True,
+                initiallyDealt=True,
+                card=self.g.caseFile.room).count(),
+            0)
+        self.assertEqual(
+            SheetItem.objects.filter(
+                detectiveSheet__game=self.g,
+                checked=True,
+                initiallyDealt=True,
+                card=self.g.caseFile.weapon).count(),
+            0)
+
+    def test_startGame_more_than_1_player_gets_dealt_cards(self):
+        #tests a bug I identified on 12/4/2016 - JJV
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        p1ds = self.player1.getDetectiveSheet()
+        p2ds = self.player2.getDetectiveSheet()
+        self.assertGreater(
+            SheetItem.objects.filter(detectiveSheet = p1ds, initiallyDealt = True, checked = True).count(),
+            0)
+
+        self.assertGreater(
+            SheetItem.objects.filter(detectiveSheet=p2ds, initiallyDealt=True, checked=True).count(),
+            0)
 
     def test_unusedCharacters_returns_all_when_no_players(self):
         self.g.initializeGame(self.player1)
@@ -240,6 +466,280 @@ class GameModelTests(TestCase):
         self.assertEqual(self.g.isCharacterInGame(self.player2.character), True)
         self.assertEqual(self.g.isCharacterInGame(Character.objects.all()[3]), False)
 
+    def test_registerGameUpdate_increments_game_seq(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        seq = self.g.currentSequence
+        self.g.registerGameUpdate()
+        self.g.save()
+        self.assertEqual(seq + 1, self.g.currentSequence)
+
+    def test_gameStateJSON_isHostPlayer_true_when_hostplayer(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+
+        gsj = self.g.gameStateJSON(self.player1)
+        self.assertEqual(gsj['isHostPlayer'], True)
+
+    def test_gameStateJSON_isHostPlayer_false_when_not_hostplayer(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['isHostPlayer'], False)
+
+    def test_gameStateJSON_hostplayer_matches_hostplayer(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        gsj = self.g.gameStateJSON(self.player2)
+        hp = gsj['hostplayer']
+        self.assertEqual(hp['player_id'], self.player1.id)
+        self.assertEqual(hp['username'], self.player1.user.username)
+
+    def test_gameStateJSON_status_matches_game_status(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        self.g.status = 0
+        self.g.save()
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['status'], 0)
+
+        self.g.status = 1
+        self.g.save()
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['status'], 1)
+
+        self.g.status = 2
+        self.g.save()
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(gsj['status'], 2)
+
+    def test_gameStateJSON_playerstates_count_matches(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+
+        self.g.addPlayer(self.player1)
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(len(gsj['playerstates']), 1)
+
+        self.g.addPlayer(self.player2)
+        gsj = self.g.gameStateJSON(self.player2)
+        self.assertEqual(len(gsj['playerstates']), 2)
+
+
 class WhoWhatWhereModelTests(TestCase):
-    #TODO: test compare methods
-    pass
+
+    def test_compare_true_when_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), True)
+        self.assertEqual(www2.compare(www1), True)
+
+    def test_compare_false_when_all_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[1]
+        r2 = Room.objects.all()[5]
+        w2 = Weapon.objects.all()[3]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
+    def test_compare_false_when_character_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[1]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
+    def test_compare_false_when_room_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[2]
+        w1 = Weapon.objects.all()[2]
+        c2 = Character.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
+    def test_compare_false_when_weapon_not_equal(self):
+        c1 = Character.objects.all()[0]
+        r1 = Room.objects.all()[3]
+        w1 = Weapon.objects.all()[3]
+        c2 = Character.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        w2 = Weapon.objects.all()[2]
+
+        www1 = WhoWhatWhere(character = c1, room = r1, weapon = w1)
+        www2 = WhoWhatWhere(character = c2, room = r2, weapon = w2)
+
+        self.assertEqual(www1.compare(www2), False)
+        self.assertEqual(www2.compare(www1), False)
+
+
+#tests for views
+
+class GameStateViewTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        #get client
+        cls.c = Client()
+        #build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        #build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+        cls.playerNotInGameAndNotUser = Player(user=cls.user3, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGameAndNotUser.save()
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+
+        cls.gsUrl = reverse('gamestate')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.playerNotInGameAndNotUser.delete()
+        cls.game1.delete()
+
+
+    def test_user_must_be_logged_in(self):
+        response = self.c.post(self.gsUrl, {})
+        self.assertRegex(response.url, 'login')
+
+    def test_not_post_not_allowed(self):
+        self.c.force_login(self.user1)
+        response = self.c.get(self.gsUrl)
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_no_parameters_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl, {})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_game_id_parameter_not_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'player_id': self.player1.id, 'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_player_id_parameter_not_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id, 'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_cached_game_seq_parameter_not_sent(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl, {})
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id, 'player_id': self.player1.id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_bad_game_id(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': -1,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_player_id(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': -1,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_user_doesnt_match_player(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player2.id,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_player_not_in_game(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.playerNotInGame.id,
+                                'cached_game_seq': self.game1.currentSequence})
+        self.assertEqual(response.status_code, 403)
+
+    def test_changed_is_false_when_cache_matches(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': (self.game1.currentSequence)})
+        responseJSON = json.loads(response.content)
+        self.assertEqual(responseJSON['changed'], False)
+
+    def test_changed_is_true_when_cache_doesnt_match(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': (self.game1.currentSequence-1)})
+        responseJSON = json.loads(response.content)
+        self.assertEqual(responseJSON['changed'], True)
+
+    def test_gameStateJSON_present_when_cache_doesnt_match(self):
+        self.c.force_login(self.user1)
+        response = self.c.post(self.gsUrl,
+                               {'game_id': self.game1.id,
+                                'player_id': self.player1.id,
+                                'cached_game_seq': (self.game1.currentSequence-1)})
+        responseJSON = json.loads(response.content)
+        self.assertIn('gamestate', responseJSON.keys())

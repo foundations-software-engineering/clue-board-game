@@ -1,0 +1,131 @@
+{% load static %}
+
+<div class="row">
+	<div class="col-md-3">
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Suspects</th>
+					<th></th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+			{% for csi in characterSheetItems %}
+				<tr>
+					<td>{{ csi.card.name }}</td>
+					{% if csi.initiallyDealt %}
+						<td><span class="glyphicon glyphicon-book" aria-hidden="true"/></td>
+						<td></td>
+					{% elif csi.checked and csi.manuallyChecked %}
+						<td><span class="glyphicon glyphicon-star-empty" aria-hidden="true"/></td>
+						<td>
+							<button type="button" class="btn btn-info"
+									onclick="manualSheetEdit('{% url 'manualsheetitemcheck' csi.detectiveSheet.game.id csi.detectiveSheet.player.id %}', {{ csi.card_id}}, 0)">
+							</button>
+						</td>
+					{% elif csi.checked %}
+						<td><span class="glyphicon glyphicon-ok" aria-hidden="true"/></td><td></td>
+					{% else %}
+						<td></td>
+						<td>
+							<button type="button" class="btn btn-info"
+									onclick="manualSheetEdit('{% url 'manualsheetitemcheck' csi.detectiveSheet.game.id csi.detectiveSheet.player.id %}', {{ csi.card_id}}, 1)">
+							</button>
+						</td>
+					{% endif %}
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	<div class="col-md-3">
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Rooms</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+			{% for rsi in roomSheetItems %}
+				<tr>
+					<td>{{ rsi.card.name }}</td>
+					{% if rsi.initiallyDealt %}
+						<td><span class="glyphicon glyphicon-book" aria-hidden="true"/></td>
+						<td></td>
+					{% elif rsi.checked and rsi.manuallyChecked %}
+						<td><span class="glyphicon glyphicon-star-empty" aria-hidden="true"/></td>
+						<td>
+							<button type="button" class="btn btn-info"
+									onclick="manualSheetEdit('{% url 'manualsheetitemcheck' rsi.detectiveSheet.game.id rsi.detectiveSheet.player.id %}', {{ rsi.card_id}}, 0)">
+							</button>
+						</td>
+					{% elif rsi.checked %}
+						<td><span class="glyphicon glyphicon-ok" aria-hidden="true"/></td><td></td>
+					{% else %}
+						<td></td>
+						<td>
+							<button type="button" class="btn btn-info"
+									onclick="manualSheetEdit('{% url 'manualsheetitemcheck' rsi.detectiveSheet.game.id rsi.detectiveSheet.player.id %}', {{ rsi.card_id}}, 1)">
+							</button>
+						</td>
+					{% endif %}
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	<div class="col-md-3">
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Weapons</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+			{% for wsi in weaponSheetItems %}
+				<tr>
+					<td>{{ wsi.card.name }}</td>
+					{% if wsi.initiallyDealt %}
+						<td><span class="glyphicon glyphicon-book" aria-hidden="true"/></td>
+						<td></td>
+					{% elif wsi.checked and wsi.manuallyChecked %}
+						<td><span class="glyphicon glyphicon-star-empty" aria-hidden="true"/></td>
+						<td>
+							<button type="button" class="btn btn-info"
+									onclick="manualSheetEdit('{% url 'manualsheetitemcheck' wsi.detectiveSheet.game.id wsi.detectiveSheet.player.id %}', {{ wsi.card_id}}, 0)">
+							</button>
+						</td>
+					{% elif wsi.checked %}
+						<td><span class="glyphicon glyphicon-ok" aria-hidden="true"/></td><td></td>
+					{% else %}
+						<td></td>
+						<td>
+							<button type="button" class="btn btn-info"
+									onclick="manualSheetEdit('{% url 'manualsheetitemcheck' wsi.detectiveSheet.game.id wsi.detectiveSheet.player.id %}', {{ wsi.card_id}}, 1)">
+							</button>
+						</td>
+					{% endif %}
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	<div class="col-md-3">
+		<table class="table">
+			<tr>
+				<th>Notes</th>
+			</tr>
+			<tr>
+				<td>
+					<textarea id="detectiveSheetNotes" class="span6" rows="9" placeholder="Leave any notes here"></textarea>
+				</td>
+			</tr>
+		</table>
+	</div>
+</div>
+
+<!-- App Specific JS -->
+<script src="{% static 'clueless/js/detectivesheet.js' %}"></script>
