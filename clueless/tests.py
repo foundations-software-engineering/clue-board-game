@@ -151,6 +151,45 @@ class DetectiveSheetTests(TestCase):
         self.assertEqual(si.checked, False)
         self.assertEqual(si.initiallyDealt, False)
 
+    def test_makeNote_manual_check(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[6]
+        ds.makeNote(c, True, manuallyChecked=True)
+
+        si = SheetItem.objects.get(detectiveSheet=ds, card=c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.manuallyChecked, True)
+
+    def test_makeNote_manual_uncheck(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[6]
+        ds.makeNote(c, True, manuallyChecked=True)
+
+        si = SheetItem.objects.get(detectiveSheet=ds, card=c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.manuallyChecked, True)
+
+        ds.makeNote(c, False, manuallyChecked=False)
+
+        si = SheetItem.objects.get(detectiveSheet=ds, card=c)
+        self.assertEqual(si.checked, False)
+        self.assertEqual(si.manuallyChecked, False)
+
+    def test_makeNote_regular_check_overrides_manual(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[6]
+        ds.makeNote(c, True, manuallyChecked=True)
+
+        si = SheetItem.objects.get(detectiveSheet=ds, card=c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.manuallyChecked, True)
+
+        ds.makeNote(c, True)
+
+        si = SheetItem.objects.get(detectiveSheet=ds, card=c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.manuallyChecked, False)
+
     def test_getCharactersLeft_works_no_characters(self):
         ds = self.player1.getDetectiveSheet()
         charsLeft = ds.getCharactersLeft()
@@ -234,6 +273,18 @@ class DetectiveSheetTests(TestCase):
         self.assertEqual(roomsLeft.count(), 0)
         for r in roomList:
             self.assertNotIn(r, roomsLeft)
+
+    def test_getCharacterSheetItems_gets_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        self.assertEqual(ds.getCharacterSheetItems().count(), Character.objects.all().count())
+
+    def test_getRoomSheetItems_gets_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        self.assertEqual(ds.getRoomSheetItems().count(), Room.objects.all().count())
+
+    def test_getWeaponSheetItems_gets_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        self.assertEqual(ds.getWeaponSheetItems().count(), Weapon.objects.all().count())
 
 
 class GameModelTests(TestCase):
@@ -605,6 +656,83 @@ class WhoWhatWhereModelTests(TestCase):
 
 #tests for views
 
+class DetectiveSheetViewTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # get client
+        cls.c = Client()
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_user_must_be_logged_in(self):
+        url = reverse('detectivesheet', args=[self.game1.id, self.player1.id])
+        response = self.c.get(url)
+        self.assertRegex(response.url, 'login')
+
+    def test_fail_bad_game_id(self):
+        url = reverse('detectivesheet', args=[0, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url)
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_player_id(self):
+        url = reverse('detectivesheet', args=[self.game1.id, 0])
+        self.c.force_login(self.user1)
+        response = self.c.get(url)
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_player_not_in_game_redirects(self):
+        url = reverse('detectivesheet', args=[self.game1.id, self.playerNotInGame.id])
+        response = self.c.get(url)
+        self.assertEqual(response.status_code, 302)
+
+    def test_fail_user_doesnt_match_player(self):
+        url = reverse('detectivesheet', args=[self.game1.id, self.player2.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_view_runs(self):
+        url = reverse('detectivesheet', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.content)
+
+
 class GameStateViewTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -743,3 +871,227 @@ class GameStateViewTest(TestCase):
                                 'cached_game_seq': (self.game1.currentSequence-1)})
         responseJSON = json.loads(response.content)
         self.assertIn('gamestate', responseJSON.keys())
+
+
+class ManualSheetItemCheckViewTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # get client
+        cls.c = Client()
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.c1 = Card.objects.all()[0]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_user_must_be_logged_in(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        response = self.c.post(url, {'card_id':self.c1.card_id, 'check':1})
+        print(response)
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_post_not_allowed(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url, {'card_id': self.c1.card_id, 'check': 1})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_no_parameters_sent(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_cached_card_id_parameter_not_sent(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'check': 1})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_cached_check_parameter_not_sent(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'card_id': self.c1.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_bad_game_id(self):
+        url = reverse('manualsheetitemcheck', args=[0, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'card_id': self.c1.card_id, 'check':1})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_player_id(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, 0])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'card_id': self.c1.card_id, 'check': 1})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_card_id(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'card_id': 0, 'check': 1})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_user_doesnt_match_player(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user2)
+        response = self.c.post(url, {'card_id': self.c1.card_id, 'check': 1})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_player_not_in_game(self):
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.playerNotInGame.id])
+        self.c.force_login(self.user3)
+        response = self.c.post(url, {'card_id': self.c1.card_id, 'check': 1})
+        self.assertEqual(response.status_code, 403)
+
+    def test_manual_checked_works(self):
+        exampleCard = SheetItem.objects.filter(
+            detectiveSheet = self.player1.getDetectiveSheet(),
+            checked = False,
+            manuallyChecked = False
+        )[0].card
+
+
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'card_id': exampleCard.card_id, 'check': 1})
+        self.assertEqual(response.status_code, 200)
+
+        si = SheetItem.objects.filter(
+            detectiveSheet=self.player1.getDetectiveSheet(),
+            checked=True,
+            manuallyChecked=True,
+            card = exampleCard
+        )
+
+        self.assertEqual(si.count(), 1)
+
+    def test_manual_uncheck_works(self):
+        exampleSI = SheetItem.objects.filter(
+            detectiveSheet=self.player1.getDetectiveSheet(),
+            checked = False,
+            initiallyDealt = False
+        )[0]
+
+        exampleSI.checked = True
+        exampleSI.manuallyChecked = True
+        exampleSI.save()
+
+
+        url = reverse('manualsheetitemcheck', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'card_id': exampleSI.card.card_id, 'check': 0})
+        self.assertEqual(response.status_code, 200)
+
+        si = SheetItem.objects.filter(
+            detectiveSheet=self.player1.getDetectiveSheet(),
+            checked=False,
+            manuallyChecked=True,
+            card=exampleSI.card.card_id
+        )
+
+        self.assertEqual(si.count(), 1)
+
+class PlayGameViewTest(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        #get client
+        cls.c = Client()
+        #build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        #build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+
+        cls.gsUrl = reverse('gamestate')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+
+    def test_user_must_be_logged_in(self):
+        url = reverse('playgame', args=[self.game1.id])
+        response = self.c.get(url)
+        self.assertRegex(response.url, 'login')
+
+    def test_fail_bad_game_id(self):
+        url = reverse('playgame', args=[0])
+        self.c.force_login(self.user1)
+        response = self.c.get(url)
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_user_not_in_game(self):
+        url = reverse('playgame', args=[self.game1.id])
+        self.c.force_login(self.user3)
+        response = self.c.get(url)
+        self.assertEqual(response.status_code, 422)
+
+    def test_game_not_started_redirects_to_begingame(self):
+        self.game1.status = 0
+        self.game1.save()
+
+        url = reverse('playgame', args=[self.game1.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url)
+        self.assertEqual(response.url, reverse('begingame', args=[self.game1.id]))

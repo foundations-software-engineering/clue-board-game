@@ -17,3 +17,14 @@ function showRooms(moveType){
 		$('#new_position_label').hide();
 	}
 }
+
+$('#playerTurnForm').submit(function(event) {
+    $.post(
+        $('#playerTurnForm').attr('action'),
+        $('#playerTurnForm').serialize()
+     ).done(function(data){
+        loadActionBar();
+     });
+
+    event.preventDefault();
+});
