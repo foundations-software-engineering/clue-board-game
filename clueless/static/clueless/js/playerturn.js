@@ -23,7 +23,7 @@ $('#playerTurnForm').submit(function(event) {
         $('#playerTurnForm').attr('action'),
         $('#playerTurnForm').serialize()
      ).done(function(data){
-        loadActionBar();
+        $( "#actionBar" ).html( data );
      });
 
     event.preventDefault();
