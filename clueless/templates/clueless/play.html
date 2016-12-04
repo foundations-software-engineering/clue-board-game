@@ -34,6 +34,7 @@
                 <div id="actionBar"></div>
             </div>
         </div>
+        <div id="detectiveSheet"></div>
     </div>
 
 
@@ -134,10 +135,26 @@
         });
     }
 
+    function loadDetectiveSheet(){
+        loadDetectiveSheet("");
+    }
+
+    function loadDetectiveSheet(notes)
+    {
+        //Define the action bar URL
+        var url = "{% url 'detectivesheet' game.id player.id %}";
+        //Retrieve the HTML and load it
+        $.get( url , function( data ) {
+            $( "#detectiveSheet" ).html( data );
+            $('#detectiveSheetNotes').val(notes);
+        });
+    }
+
     //The function that gets called when the page loads
     $(document).ready(function(){
         //Load the content bar -- can be reloaded as needed
         loadActionBar();
+        loadDetectiveSheet();
         //Update canvas size
         var ctx = document.getElementById('clueless').getContext('2d');
         //Set both to width, to keep it square

@@ -298,7 +298,12 @@ class Game(models.Model):
             self.status = STARTED
 
         #get all of the games detective sheets
-        detectiveSheets = DetectiveSheet.objects.filter(game = self)
+        detectiveSheetsQS = DetectiveSheet.objects.filter(game = self)
+        #flatten/ not sure why I have to do this, but otherwise the indexing later doesn't work
+        detectiveSheets = list()
+        for ds in detectiveSheetsQS:
+            detectiveSheets.append(ds)
+
         #get all cards that ARE NOT in the casefile
         cards = Card.objects.exclude(
             card_id = self.caseFile.character.card_id).exclude(
@@ -314,7 +319,7 @@ class Game(models.Model):
 
         #deal the cards into each detective sheet
         for i in range(0, len(cardList)):
-            dsIndex = i % detectiveSheets.count()
+            dsIndex = i % len(detectiveSheets)
             detectiveSheets[dsIndex].makeNote(cardList[i], True, True)
 
         self.save()
@@ -413,6 +418,11 @@ class Game(models.Model):
         #TODO: implement this method
         self.registerGameUpdate()
 
+    def __str__(self):
+        return ("id: {}, name: {}".format(
+            self.id, self.name
+        ))
+
 
 class DetectiveSheet(models.Model):
     """
@@ -435,6 +445,18 @@ class DetectiveSheet(models.Model):
             si = SheetItem(detectiveSheet=self, card=c, checked=False, initiallyDealt=False)
             si.save()
 
+    def getCharactersLeft(self):
+        """
+        :return: Set of Character objects that a player has not yet checked off
+        """
+        return (Character.objects.exclude(card_id__in=self.__getCheckedCardIds()))
+
+    def getCharacterSheetItems(self):
+        """
+        :return: QuerySet of all sheet items relating to a character
+        """
+        charIds = Character.objects.all().values_list('card_id', flat=True)
+        return SheetItem.objects.filter(detectiveSheet = self,  card__card_id__in=charIds).order_by("card__name")
 
     def getRoomsLeft(self):
         """
@@ -442,11 +464,12 @@ class DetectiveSheet(models.Model):
         """
         return (Room.objects.exclude(card_id__in=self.__getCheckedCardIds()))
 
-    def getCharactersLeft(self):
+    def getRoomSheetItems(self):
         """
-        :return: Set of Character objects that a player has not yet checked off
+        :return: QuerySet of all sheet items relating to a room
         """
-        return (Character.objects.exclude(card_id__in=self.__getCheckedCardIds()))
+        roomIds = Room.objects.all().values_list('card_id', flat=True)
+        return SheetItem.objects.filter(detectiveSheet = self,  card__card_id__in=roomIds).order_by("card__name")
 
     def getWeaponsLeft(self):
         """
@@ -454,7 +477,14 @@ class DetectiveSheet(models.Model):
         """
         return (Weapon.objects.exclude(card_id__in = self.__getCheckedCardIds()))
 
-    def makeNote(self, card, checked, initiallyDealt = False):
+    def getWeaponSheetItems(self):
+        """
+        :return: QuerySet of all sheet items relating to a weapon
+        """
+        weaponIds = Weapon.objects.all().values_list('card_id', flat=True)
+        return SheetItem.objects.filter(detectiveSheet = self,  card__card_id__in=weaponIds ).order_by("card__name")
+
+    def makeNote(self, card, checked, initiallyDealt = False, manuallyChecked = False):
         """
         Notes whether a player has checked off a particular card or not
         :param card: Card that is being checked off
@@ -463,6 +493,7 @@ class DetectiveSheet(models.Model):
         si = SheetItem.objects.get(detectiveSheet = self, card = card)
         si.checked = checked
         si.initiallyDealt = initiallyDealt
+        si.manuallyChecked = manuallyChecked
         si.save()
 
 
@@ -474,3 +505,9 @@ class SheetItem(models.Model):
     card = models.ForeignKey(Card)
     checked = models.BooleanField(default = False)
     initiallyDealt = models.BooleanField(default = False)
+    manuallyChecked = models.BooleanField(default = False)
+
+    def __str__(self):
+        return ("user: {}, game: [{}], card: {}, checked: {}".format(
+            self.detectiveSheet.player.user.__str__(), self.detectiveSheet.game.__str__(), self.card.__str__(), self.checked.__str__()
+        ))

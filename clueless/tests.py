@@ -371,6 +371,24 @@ class GameModelTests(TestCase):
                 card=self.g.caseFile.weapon).count(),
             0)
 
+    def test_startGame_more_than_1_player_gets_dealt_cards(self):
+        #tests a bug I identified on 12/4/2016 - JJV
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        p1ds = self.player1.getDetectiveSheet()
+        p2ds = self.player2.getDetectiveSheet()
+        self.assertGreater(
+            SheetItem.objects.filter(detectiveSheet = p1ds, initiallyDealt = True, checked = True).count(),
+            0)
+
+        self.assertGreater(
+            SheetItem.objects.filter(detectiveSheet=p2ds, initiallyDealt=True, checked=True).count(),
+            0)
+
     def test_unusedCharacters_returns_all_when_no_players(self):
         self.g.initializeGame(self.player1)
         self.g.save()
