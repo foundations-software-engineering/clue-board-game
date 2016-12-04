@@ -177,6 +177,8 @@ def playgame(request, game_id):
 
 @login_required
 def playerturn(request):
+	template = loader.get_template('clueless/playerturn.html')
+
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
 			#store variables for easier usage
@@ -199,7 +201,6 @@ def playerturn(request):
 			#logger.error('user_id or player_move not provided')
 			print('user_id or player_move not provided')
 
-	template = loader.get_template('clueless/playerturn.html')
 	context = {}
 	return HttpResponse(template.render(context,request))
 
