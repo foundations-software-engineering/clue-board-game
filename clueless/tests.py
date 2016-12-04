@@ -4,7 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 import json
 
-from clueless.models import Card, CaseFile, Character, Game, Player, Room, Weapon, WhoWhatWhere
+from clueless.models import Card, CaseFile, Character, DetectiveSheet, Game, Player, Room, SheetItem, Weapon, WhoWhatWhere
 
 
 class AAA_DBSetup(TestCase):
@@ -91,6 +91,151 @@ class CaseFileModelTests(TestCase):
         self.assertEqual(cf1.compare(cf2) and cf1.compare(cf3) and cf2.compare(cf3), False)
 
 
+class DetectiveSheetTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        #build users
+        cls.user1 = User.objects.create_user('detectiveSheetUser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('detectiveSheetUser2', 'a@a.com', 'password')
+        cls.user2.save()
+
+        #build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+
+        cls.g = Game()
+        cls.g.initializeGame(cls.player1)
+        cls.g.save()
+        cls.g.addPlayer(cls.player1)
+        cls.g.addPlayer(cls.player2)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.g.delete()
+
+    def test_makeNote_initial_deal(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[3]
+        ds.makeNote(c, True, True)
+
+        si = SheetItem.objects.get(detectiveSheet = ds, card = c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.initiallyDealt, True)
+
+    def test_makeNote_after_initial_deal(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[6]
+        ds.makeNote(c, True)
+
+        si = SheetItem.objects.get(detectiveSheet = ds, card = c)
+        self.assertEqual(si.checked, True)
+        self.assertEqual(si.initiallyDealt, False)
+
+    def test_makeNote_uncheck(self):
+        ds = self.player1.getDetectiveSheet()
+        c = Card.objects.all()[6]
+        ds.makeNote(c, True)
+        ds.makeNote(c, False)
+
+        si = SheetItem.objects.get(detectiveSheet=ds, card=c)
+        self.assertEqual(si.checked, False)
+        self.assertEqual(si.initiallyDealt, False)
+
+    def test_getCharactersLeft_works_no_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        charsLeft = ds.getCharactersLeft()
+        self.assertEqual(charsLeft.count(), Character.objects.all().count())
+
+    def test_getCharactersLeft_works_some_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        c1 = Character.objects.all()[0]
+        c2 = Character.objects.all()[3]
+        ds.makeNote(c1, True)
+        ds.makeNote(c2, True)
+
+        charsLeft = ds.getCharactersLeft()
+        self.assertEqual(charsLeft.count(), Character.objects.all().count() - 2)
+        self.assertNotIn(c1, charsLeft)
+        self.assertNotIn(c2, charsLeft)
+
+    def test_getCharactersLeft_works_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        charList = Character.objects.all()
+        for c in charList:
+            ds.makeNote(c, True)
+
+        charsLeft = ds.getCharactersLeft()
+        self.assertEqual(charsLeft.count(), 0)
+        for c in charList:
+            self.assertNotIn(c, charsLeft)
+
+    def test_getWeaponsLeft_works_no_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        weaponsLeft = ds.getWeaponsLeft()
+        self.assertEqual(weaponsLeft.count(), Weapon.objects.all().count())
+
+    def test_getWeaponsLeft_works_some_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        w1 = Weapon.objects.all()[0]
+        w2 = Weapon.objects.all()[3]
+        ds.makeNote(w1, True)
+        ds.makeNote(w2, True)
+
+        weaponsLeft = ds.getWeaponsLeft()
+        self.assertEqual(weaponsLeft.count(), Weapon.objects.all().count() - 2)
+        self.assertNotIn(w1, weaponsLeft)
+        self.assertNotIn(w2, weaponsLeft)
+
+    def test_getWeaponsLeft_works_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        weaponList = Weapon.objects.all()
+        for w in weaponList:
+            ds.makeNote(w, True)
+
+        weaponsLeft = ds.getWeaponsLeft()
+        self.assertEqual(weaponsLeft.count(), 0)
+        for w in weaponList:
+            self.assertNotIn(w, weaponsLeft)
+
+    def test_getRoomsLeft_works_no_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        roomsLeft = ds.getRoomsLeft()
+        self.assertEqual(roomsLeft.count(), Room.objects.all().count())
+
+    def test_getRoomsLeft_works_some_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        r1 = Room.objects.all()[0]
+        r2 = Room.objects.all()[3]
+        ds.makeNote(r1, True)
+        ds.makeNote(r2, True)
+
+        roomsLeft = ds.getRoomsLeft()
+        self.assertEqual(roomsLeft.count(), Room.objects.all().count() - 2)
+        self.assertNotIn(r1, roomsLeft)
+        self.assertNotIn(r2, roomsLeft)
+
+    def test_getRoomsLeft_works_all_characters(self):
+        ds = self.player1.getDetectiveSheet()
+        roomList = Room.objects.all()
+        for r in roomList:
+            ds.makeNote(r, True)
+
+        roomsLeft = ds.getRoomsLeft()
+        self.assertEqual(roomsLeft.count(), 0)
+        for r in roomList:
+            self.assertNotIn(r, roomsLeft)
+
+
 class GameModelTests(TestCase):
 
     @classmethod
@@ -151,42 +296,80 @@ class GameModelTests(TestCase):
         with self.assertRaises(RuntimeError):
             self.g.addPlayer(newPlayer)
 
-    def test_beginGame_raise_error_with_no_players(self):
+    def test_startGame_raise_error_with_no_players(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player1)
+            self.g.startGame(self.user1)
 
-    def test_beginGame_raise_error_with_one_player(self):
+    def test_startGame_raise_error_with_one_player(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player1)
+            self.g.startGame(self.user1)
 
-    def test_beginGame_raise_error_with_wrong_host(self):
+    def test_startGame_raise_error_with_wrong_host(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         self.g.addPlayer(self.player2)
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player2)
+            self.g.startGame(self.user2)
 
-    def test_beginGame_raise_error_when_already_started(self):
+    def test_startGame_raise_error_when_already_started(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         self.g.addPlayer(self.player2)
         self.g.status = 1
         with self.assertRaises(RuntimeError):
-            self.g.startGame(self.player1)
+            self.g.startGame(self.user1)
 
-    def test_beginGame_works_with_2_players(self):
+    def test_startGame_works_with_2_players(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
         self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+    def test_startGame_deals_all_remaining_cards(self):
+        self.g.initializeGame(self.player1)
         self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.assertEqual(
+            SheetItem.objects.filter(detectiveSheet__game = self.g, checked = True, initiallyDealt = True).count(),
+            Card.objects.all().count() - 3)
+
+    def test_startGame_doesnt_deal_casefile_cards(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.assertEqual(
+            SheetItem.objects.filter(
+                detectiveSheet__game = self.g,
+                checked = True,
+                initiallyDealt = True,
+                card = self.g.caseFile.character).count(),
+            0)
+        self.assertEqual(
+            SheetItem.objects.filter(
+                detectiveSheet__game=self.g,
+                checked=True,
+                initiallyDealt=True,
+                card=self.g.caseFile.room).count(),
+            0)
+        self.assertEqual(
+            SheetItem.objects.filter(
+                detectiveSheet__game=self.g,
+                checked=True,
+                initiallyDealt=True,
+                card=self.g.caseFile.weapon).count(),
+            0)
 
     def test_unusedCharacters_returns_all_when_no_players(self):
         self.g.initializeGame(self.player1)
@@ -304,7 +487,6 @@ class GameModelTests(TestCase):
         self.g.save()
         gsj = self.g.gameStateJSON(self.player2)
         self.assertEqual(gsj['status'], 2)
-
 
     def test_gameStateJSON_playerstates_count_matches(self):
         self.g.initializeGame(self.player1)

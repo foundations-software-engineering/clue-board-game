@@ -59,6 +59,13 @@ class Player(models.Model):
             self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
         ))
 
+    def getDetectiveSheet(self):
+        """
+
+        :return: The player's detective sheet for the current game
+        """
+        return DetectiveSheet.objects.get(game = self.currentGame, player = self)
+
 
 class Hallway(SpaceCollection):
     """
@@ -280,6 +287,7 @@ class Game(models.Model):
         Starts a game
         :param user: user that will be the host
         """
+
         if self.status != 0:
             raise RuntimeError('Game already started')
         elif Player.objects.filter(currentGame__id=self.id).count() < 2:
@@ -288,6 +296,28 @@ class Game(models.Model):
             raise RuntimeError('Game can only be started by host')
         else:
             self.status = STARTED
+
+        #get all of the games detective sheets
+        detectiveSheets = DetectiveSheet.objects.filter(game = self)
+        #get all cards that ARE NOT in the casefile
+        cards = Card.objects.exclude(
+            card_id = self.caseFile.character.card_id).exclude(
+            card_id = self.caseFile.room.card_id).exclude(
+            card_id = self.caseFile.weapon.card_id)
+
+        #add these cards to a list, then shuffle
+        cardList = list()
+        for c in cards:
+            cardList.append(c)
+
+        random.shuffle(cardList)
+
+        #deal the cards into each detective sheet
+        for i in range(0, len(cardList)):
+            dsIndex = i % detectiveSheets.count()
+            detectiveSheets[dsIndex].makeNote(cardList[i], True, True)
+
+        self.save()
         self.registerGameUpdate()
 
     def isUserInGame(self, user):
@@ -321,6 +351,10 @@ class Game(models.Model):
             raise RuntimeError("Character is already in use")
         player.currentGame = self
         player.save()
+        #give player a detective sheet
+        ds = DetectiveSheet(game = self, player = player)
+        ds.save()
+        ds.addDefaultSheets()
         self.registerGameUpdate()
 
     def registerGameUpdate(self):
@@ -388,35 +422,48 @@ class DetectiveSheet(models.Model):
     game = models.ForeignKey(Game)
     player = models.ForeignKey(Player)
 
+    def __getCheckedCardIds(self):
+        checkedSI = SheetItem.objects.filter(detectiveSheet = self, checked = True)
+        checkedIds = list()
+        for si in checkedSI:
+            checkedIds.append(si.card.card_id)
+
+        return checkedIds
+
+    def addDefaultSheets(self):
+        for c in Card.objects.all():
+            si = SheetItem(detectiveSheet=self, card=c, checked=False, initiallyDealt=False)
+            si.save()
+
+
     def getRoomsLeft(self):
         """
         :return: Set of Room object that a player has not yet checked off
         """
-        #TODO: implement this method
-        return(None)
+        return (Room.objects.exclude(card_id__in=self.__getCheckedCardIds()))
 
     def getCharactersLeft(self):
         """
         :return: Set of Character objects that a player has not yet checked off
         """
-        # TODO: implement this method
-        return (None)
+        return (Character.objects.exclude(card_id__in=self.__getCheckedCardIds()))
 
     def getWeaponsLeft(self):
         """
         :return: Set of Weapon objects that a player has not yet checked off
         """
-        # TODO: implement this method
-        return (None)
+        return (Weapon.objects.exclude(card_id__in = self.__getCheckedCardIds()))
 
-    def makeNote(self, card, checked):
+    def makeNote(self, card, checked, initiallyDealt = False):
         """
         Notes whether a player has checked off a particular card or not
         :param card: Card that is being checked off
         :param checked: boolean whether to check or uncheck
         """
-        #TODO: implement this method
-        pass
+        si = SheetItem.objects.get(detectiveSheet = self, card = card)
+        si.checked = checked
+        si.initiallyDealt = initiallyDealt
+        si.save()
 
 
 class SheetItem(models.Model):
@@ -425,4 +472,5 @@ class SheetItem(models.Model):
     """
     detectiveSheet = models.ForeignKey(DetectiveSheet)
     card = models.ForeignKey(Card)
-    checked = models.BooleanField
+    checked = models.BooleanField(default = False)
+    initiallyDealt = models.BooleanField(default = False)
