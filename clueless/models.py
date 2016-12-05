@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
-import datetime
 import logging
 import random
 
@@ -169,11 +169,12 @@ class Turn(models.Model):
             if Accusation.objects.filter(turn = self).count() > 1:
                 logger.error("accusation already made")
                 return False
+            return True
         elif action.__class__ == Suggestion:
             if Suggestion.objects.filter(turn = self).count() > 1:
                 logger.error("suggestion already made")
                 return False
-            elif Accusation.objects.filter(turn = self).count() > 1:
+            elif Accusation.objects.filter(turn = self).count() > 0:
                 logger.error("accusation already made")
                 return False
             return True
@@ -272,6 +273,14 @@ class Accusation(Action):
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
 
+    def validate(self):
+        #TODO: implement
+        return True
+
+    def performAction(self):
+        # TODO: implement
+        pass
+
 
 class Move(Action):
     """
@@ -280,6 +289,13 @@ class Move(Action):
     fromSpace = models.ForeignKey(Space, related_name='fromSpace')
     toSpace = models.ForeignKey(Space, related_name='toSpace')
 
+    def validate(self):
+        #TODO: implement
+        return True
+
+    def performAction(self):
+        # TODO: implement
+        pass
 
 class CaseFile(WhoWhatWhere):
     """
@@ -311,8 +327,8 @@ class Game(models.Model):
     caseFile = models.ForeignKey(CaseFile)
     board = models.ForeignKey(Board)
     status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
-    startTime = models.DateTimeField(default = datetime.datetime.now, blank = True)
-    lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
+    startTime = models.DateTimeField(default = timezone.now(), blank = True)
+    lastUpdateTime = models.DateTimeField(default=timezone.now(), blank=True)
     hostPlayer = models.ForeignKey(Player)
     name = models.CharField(max_length=60)
     currentSequence = models.IntegerField(default = 0)
@@ -388,17 +404,10 @@ class Game(models.Model):
             dsIndex = i % len(detectiveSheets)
             detectiveSheets[dsIndex].makeNote(cardList[i], True, True)
 
-<<<<<<< HEAD
         #create all the nonUser players for remaining characters
         #must happen after detectiveSheet logic because these players don't get detectiveSheets
         for c in self.unusedCharacters():
             nonUserPlayer = Player(character=c, currentSpace=c.defaultSpace, currentGame = self, nonUserPlayer = True)
-=======
-        # create all the nonUser players for remaining characters
-        # must happen after detectiveSheet logic because these players don't get detectiveSheets
-        for c in self.unusedCharacters():
-            nonUserPlayer = Player(character=c, currentSpace=c.defaultSpace, currentGame=self, nonUserPlayer=True)
->>>>>>> Added turn and suggestion validation/perform
             nonUserPlayer.save()
 
         self.save()
@@ -445,7 +454,7 @@ class Game(models.Model):
         """
         Updates the last update time to now, and increments the current game sequence
         """
-        self.lastUpdateTime = datetime.datetime.now()
+        self.lastUpdateTime = timezone.now()
         self.currentSequence = self.currentSequence + 1
         self.save()
 
