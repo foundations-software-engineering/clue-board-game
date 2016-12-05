@@ -187,16 +187,16 @@ def playerturn(request):
 	#get request variables
 	user_id = request.user
 	#mocked for now, will get for real in jerrold's branch
-	game_id =2
-	game = Game.objects.get(id=game_id)
+	game_id = 1
+	game = Game.objects.get(id = game_id)
 	player = Player.objects.get(user = user_id, game=game)
 
 	if request.method == 'GET':
+		print(game.currentTurn.player)
+		print(player)
 		if player.compare(game.currentTurn.player):
-			print("is turn")
 			context['isPlayerTurn'] = 'true'
 		else:
-			print("is not turn")
 			context['isPlayerTurn'] = 'false'
 
 	if request.method == 'POST':
