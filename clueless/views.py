@@ -191,8 +191,11 @@ def playerturn(request, game_id):
 			#store variables for easier usage
 			user_id = request.user
 			player_move = request.POST['player_move']
-
-			player = Player.objects.get(user = user_id, game = game)
+			new_position = request.POST['new_position']
+			#mocked for now, will get in jerrold's branch
+			game_id = 2
+			game = Game.objects.get(id=game_id)
+			player = Player.objects.get(user = user_id, game=game)
 			
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
@@ -214,6 +217,9 @@ def playerturn(request, game_id):
 				#TODO: logic for confirming space is valid
 				new_position = request.POST['new_position']
 				print("checking if player " + str(user_id) + " can move to " + new_position + " from " + str(player.currentSpace))
+			elif player_move =="endTurn":
+				turn = Turn.objects.get(player=player, game=game)
+				turn.endTurn()
 		else:
 			#TODO: replace with logging later(don't want to replicate from grehg's but will use below commented out code)
 			#logger.error('user_id or player_move not provided')
@@ -439,8 +445,13 @@ def begin_game_controller(request):
 		game.startGame(request.user)
 		game.save()
 
+		#check conditions, start game if conditions met
+		player = Player.objects.get(user=request.user, currentGame=game)
+		game.currentTurn = Turn.objects.get(player=player, game=game)
+
 		# kewl, we are done now.  Let's send our user to the game interface
 		return redirect('playgame', game_id = game.id)
+
 	else:
 		logger.error('POST expected, actual ' + request.method)
 

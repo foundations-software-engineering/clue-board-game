@@ -68,6 +68,9 @@ class Player(models.Model):
                 self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
             ))
 
+    def compare(self, otherPlayer):
+        return self.user == otherPlayer.user
+
     def getDetectiveSheet(self):
         """
 
@@ -206,18 +209,19 @@ class Turn(models.Model):
         else:
             return("Unable to perform action")
 
-    def endTurn(self, game, player):
+    def endTurn(self):
         """
         Ends this turn
         """
-        pass
-    #     nextTurn = Turn(stuff, in, here)
-    # nextTurn.save()
-    # self.game.currentTurn = nextTurn
-    # # self.game.save()
-    #     players =
-    #     nextTurn = Turn.objects.get(game=self.currentGame__id, )
-
+        currentPlayer = self.game.currentTurn.player
+        players = Player.objects.filter(currentGame = self.game)
+        for i, player in enumerate(players):
+            if player.compare(currentPlayer):
+                next_player = players[(i+1) % len(players)]
+                break
+        nextTurn = Turn.objects.get(player=next_player, game=self.game)
+        self.game.currentTurn = nextTurn
+        self.game.save()
 
 class Action(models.Model):
     """
