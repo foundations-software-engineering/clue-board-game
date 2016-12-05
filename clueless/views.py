@@ -30,6 +30,9 @@ def login(request):
 	loginError = False
 
 	if(request.method == "POST"):
+		vpp = validatePostParams(request, ["username", "password"])
+		if vpp is not None:
+			return vpp
 		#get the username and password, and attempt to authenticate
 		username = request.POST.get('username')
 		password = request.POST.get('password')
@@ -258,19 +261,9 @@ def gamestate(request):
 	:return: If the gameState is the same as before, return {'changed':false}.Otherwise, render a JSON representation of the current game state
 	"""
 	#parse request
-	if request.method != 'POST':
-		logger.error('request is not a post request')
-		return HttpResponse(status=417, content="must be POST request")
-	#check for valid request parameters
-	elif 'game_id' not in request.POST:
-		logger.error('game_id not provided')
-		return HttpResponse(status = 417, content="game_id not provided")
-	elif 'player_id' not in request.POST:
-		logger.error('player_id not provided')
-		return HttpResponse(status = 417, content="player_id not provided")
-	elif 'cached_game_seq' not in request.POST:
-		logger.error('cached_game_seq not provided')
-		return HttpResponse(status = 417, content="cached_game_seq not provided")
+	vpp = validatePostParams(request, ["game_id", "player_id", "cached_game_seq"])
+	if vpp is not None:
+		return vpp
 
 	game_id = request.POST.get('game_id')
 	player_id = request.POST.get('player_id')
@@ -318,42 +311,39 @@ def start_game_controller(request):
 	"""
 	if request.method == 'POST':
 		#validate required fields are present
-		if 'character_id' not in request.POST:
-			logger.error('character_id not provided')
+		vpp = validatePostParams(request, ["character_id", "game_name"])
+		if vpp is not None:
+			return vpp
+
+		#can get logged in user direct from request object
+		user = request.user
+		character_id = request.POST.get('character_id')
+		game_name = request.POST.get('game_name')
+
+		#get character object
+		try:
+			character = Character.objects.get(card_id = character_id)
+		except ObjectDoesNotExist: # Possible User.DoesNotExist
+			logger.error('''character not found (Did you forget to add the
+			character in the admin panel?''')
 			return redirect('startgame')
-		elif 'game_name' not in request.POST:
-			logger.error('game name not provided')
-			return redirect('startgame')
-		else:
-			#can get logged in user direct from request object
-			user = request.user
-			character_id = request.POST.get('character_id')
-			game_name = request.POST.get('game_name')
 
-			#get character object
-			try:
-				character = Character.objects.get(card_id = character_id)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.error('''character not found (Did you forget to add the
-				character in the admin panel?''')
-				return redirect('startgame')
+		# Constructs our game, saves the changes and starts it
+		game = Game(name = game_name)
 
-			# Constructs our game, saves the changes and starts it
-			game = Game(name = game_name)
+		# Create a Player object for the Host
+		player = Player(user = user, character = character, currentSpace = character.defaultSpace)
+		player.save()
 
-			# Create a Player object for the Host
-			player = Player(user = user, character = character, currentSpace = character.defaultSpace)
-			player.save()
+		#initialize the game, save, add player, and redirect
+		game.initializeGame(player)
+		game.save()
 
-			#initialize the game, save, add player, and redirect
-			game.initializeGame(player)
-			game.save()
+		game.addPlayer(player)
+		game.save()
 
-			game.addPlayer(player)
-			game.save()
-
-			# kewl, we are done now.  Let's send our user to the game interface
-			return redirect('begingame', game_id = game.id)
+		# kewl, we are done now.  Let's send our user to the game interface
+		return redirect('begingame', game_id = game.id)
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
@@ -367,53 +357,50 @@ def join_game_controller(request):
 	"""
 	if request.method == 'POST':
 		#validate necessary fields are present
-		if 'character_id' not in request.POST:
-			logger.error('character_id not provided')
+		vpp = validatePostParams(request, ["character_id", "game_id"])
+		if vpp is not None:
+			return vpp
+
+		#can get logged in user direct from request object
+		user = request.user
+		#get ids from post
+		character_id = request.POST.get('character_id')
+		game_id = request.POST.get('game_id')
+		#get object instances
+		try:
+			character = Character.objects.get(card_id = character_id)
+		except Character.DoesNotExist:
+			logger.error('''Character not found''')
 			return redirect('joingame')
-		elif 'game_id' not in request.POST:
-			logger.error('game_id not provided')
+
+		try:
+			game = Game.objects.get(id = game_id)
+		except Game.DoesNotExist:
+			logger.error('''Game not found''')
 			return redirect('joingame')
-		else:
-			#can get logged in user direct from request object
-			user = request.user
-			#get ids from post
-			character_id = request.POST.get('character_id')
-			game_id = request.POST.get('game_id')
-			#get object instances
-			try:
-				character = Character.objects.get(card_id = character_id)
-			except Character.DoesNotExist:
-				logger.error('''Character not found''')
-				return redirect('joingame')
 
-			try:
-				game = Game.objects.get(id = game_id)
-			except Game.DoesNotExist:
-				logger.error('''Game not found''')
-				return redirect('joingame')
+		#creates a player object for the new user
+		player = Player(user=user, character=character, currentSpace=character.defaultSpace)
+		player.save()
 
-			#creates a player object for the new user
-			player = Player(user=user, character=character, currentSpace=character.defaultSpace)
-			player.save()
-
-			# adds user/player to game
-			if game.status != 0:
-				logger.error('''Game already started''')
-				#if user is in game, go to game, otherwise go to lobby
-				if game.isUserInGame(user):
-					return redirect('playgame', game_id=game.id)
-				else:
-					return redirect('lobby')
-			elif game.isUserInGame(user):
-				logger.error('''User already in game''')
-				return redirect('begingame', game_id=game.id)
+		# adds user/player to game
+		if game.status != 0:
+			logger.error('''Game already started''')
+			#if user is in game, go to game, otherwise go to lobby
+			if game.isUserInGame(user):
+				return redirect('playgame', game_id=game.id)
 			else:
-				game.addPlayer(player)
+				return redirect('lobby')
+		elif game.isUserInGame(user):
+			logger.error('''User already in game''')
+			return redirect('begingame', game_id=game.id)
+		else:
+			game.addPlayer(player)
 
-			game.save()
+		game.save()
 
-			# kewl, we are done now.  Let's send our user to the game interface
-			return redirect('begingame', game_id = game.id)
+		# kewl, we are done now.  Let's send our user to the game interface
+		return redirect('begingame', game_id = game.id)
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
@@ -425,27 +412,27 @@ def begin_game_controller(request):
 	:return:
 	"""
 	if request.method == 'POST':
-		if 'game_id' not in request.POST:
-			logger.error('game_id not provided')
+		# validate necessary fields are present
+		vpp = validatePostParams(request, ["game_id"])
+		if vpp is not None:
+			return vpp
+		#can get logged in user direct from request object
+		user = request.user
+		#get ids from post and attempt to lookup model objects
+		game_id = request.POST.get('game_id')
+
+		try:
+			game = Game.objects.get(id = game_id)
+		except Game.DoesNotExist:
+			logger.error('''Game not found''')
 			return redirect('begingame')
-		else:
-			#can get logged in user direct from request object
-			user = request.user
-			#get ids from post and attempt to lookup model objects
-			game_id = request.POST.get('game_id')
 
-			try:
-				game = Game.objects.get(id = game_id)
-			except Game.DoesNotExist:
-				logger.error('''Game not found''')
-				return redirect('begingame')
+		#check conditions, start game if conditions met
+		game.startGame(request.user)
+		game.save()
 
-			#check conditions, start game if conditions met
-			game.startGame(request.user)
-			game.save()
-
-			# kewl, we are done now.  Let's send our user to the game interface
-			return redirect('playgame', game_id = game.id)
+		# kewl, we are done now.  Let's send our user to the game interface
+		return redirect('playgame', game_id = game.id)
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
@@ -454,19 +441,10 @@ def make_suggestion_controller(request, game_id, player_id):
 	Creates a suggestion that is composed of a character, weapon and room
 	"""
 	# parse request
-	if request.method != 'POST':
-		logger.error('request is not a post request')
-		return HttpResponse(status=417, content="must be POST request")
-	# check for valid request parameters
-	elif 'suspect_id' not in request.POST:
-		logger.error('suspect_id not provided')
-		return HttpResponse(status=417, content="suspect_id not provided")
-	elif 'room_id' not in request.POST:
-		logger.error('room_id not provided')
-		return HttpResponse(status=417, content="room_id not provided")
-	elif 'weapon_id' not in request.POST:
-		logger.error('weapon_id not provided')
-		return HttpResponse(status=417, content="weapon_id not provided")
+	# validate necessary fields are present
+	vpp = validatePostParams(request, ["suspect_id", "room_id", "weapon_id"])
+	if vpp is not None:
+		return vpp
 
 	suspect_id = request.POST.get("suspect_id")
 	room_id= request.POST.get("room_id")
@@ -570,16 +548,10 @@ def manualsheetitemcheck(request, game_id, player_id):
 	:return:
 	"""
 	# parse request
-	if request.method != 'POST':
-		logger.error('request is not a post request')
-		return HttpResponse(status=417, content="must be POST request")
-	# check for valid request parameters
-	elif 'card_id' not in request.POST:
-		logger.error('card_id not provided')
-		return HttpResponse(status=417, content="card_id not provided")
-	elif 'check' not in request.POST:
-		logger.error('check not provided')
-		return HttpResponse(status=417, content="check not provided")
+
+	vpp = validatePostParams(request, ["card_id", "check"])
+	if vpp is not None:
+		return vpp
 
 	card_id = request.POST.get("card_id")
 
@@ -610,3 +582,16 @@ def manualsheetitemcheck(request, game_id, player_id):
 	player.getDetectiveSheet().makeNote(card, check > 0, manuallyChecked = True)
 
 	return HttpResponse(status = 200)
+
+
+#view helper functions
+def validatePostParams(request, requiredParams):
+	if request.method != 'POST':
+		logger.error('request is not a post request')
+		return HttpResponse(status=417, content="must be POST request")
+	# check for valid request parameters
+	for rp in requiredParams:
+		if rp not in request.POST:
+			logger.error(rp + ' not provided')
+			return HttpResponse(status=417, content=(rp + " not provided"))
+	return None
