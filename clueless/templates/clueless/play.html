@@ -54,6 +54,12 @@
     <script src="https://code.createjs.com/preloadjs-0.6.2.min.js"></script>
 
     <script type="text/javascript">
+    //Define global variables
+    var cached_game_seq = -1;
+    var stage;
+    var canvas;
+    var players = [];
+
     //Define the space locations from the database
 	var spaceLocations = [
 		{% for space in spaces %}
@@ -66,28 +72,31 @@
         img = new Image();
         img.onload = loadImage;
         img.src = "{% static 'clueless/images/GridBackground.png' %}";
+
+        //Call game state
+        setInterval(function(){
+            getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, cached_game_seq);
+            }, 5000
+        );
     }
 
     function loadImage() {
         //Locate canvas and load image
-        var canvas = document.getElementById('clueless');
+        canvas = document.getElementById('clueless');
 
         //Create stage to load image
         stage = new createjs.Stage(canvas);
 
-        console.log(canvas.width);
-
         //Define scaling variables
         canvasScaleX = Math.round((canvas.width/1500) * 100) / 100;
         canvasScaleY = Math.round((canvas.height/1500) * 100) / 100;
-
-        console.log('ScaleX: '+canvasScaleX);
 
 		//Scale from 1500x1500 image
         var bmp = new createjs.Bitmap(img).set({scaleX: canvasScaleX, scaleY: canvasScaleY});
         stage.addChild(bmp);
 
         //Add local character - with movement options
+        /*
         var scarlet = new createjs.Shape();
         scarlet.graphics.beginFill("Red").drawCircle(0,0,15);
         scarlet.x = 215;
@@ -120,6 +129,7 @@
             //TODO: send message to server
             console.log('Send POST request: move player to '+targetSpace);  
         });
+        */
 
         //Draw frame
         stage.update();
@@ -160,7 +170,7 @@
         //Set both to width, to keep it square
         ctx.canvas.width = innerWidth;
         ctx.canvas.height = innerWidth;
-        //Load images
+        //Load background images
         init();
     });
     </script>

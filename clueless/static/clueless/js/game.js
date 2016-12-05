@@ -19,6 +19,10 @@ function Player (color, x, y) {
 		//Return game piece to be displayed
 		return this.gamePiece;
 	}
+
+	this.getGamePiece = function() {
+		return this.gamePiece;
+	}
 }
 
 function getLocationFromCoordinates(x, y){
@@ -43,6 +47,63 @@ function getLocationFromCoordinates(x, y){
 	}
 }
 
+function updateGameState(data){
+	//Get canvas object
+	var canvasObject = document.getElementById('clueless').getContext('2d');
+	//Get the height and width
+	var canvasHeight = canvasObject.canvas.height;
+	var canvasWidth = canvasObject.canvas.width;
+	//Get the equal blocks
+	var heightBlock = Math.floor(canvasHeight/5);
+	var widthBlock = Math.floor(canvasWidth/5);
+
+	//Check if the game status has changed
+	if(data['changed'] == true){
+		//Update game sequence
+		cached_game_seq = data['gamestate']['game_sequence'];
+		//Loop through each player
+		var index;
+		for(index=0; index < data['gamestate']['playerstates'].length; index++){
+			var characterId = data['gamestate']['playerstates'][index]['character']['character_id'];
+			var characterColor = data['gamestate']['playerstates'][index]['character']['character_color'];
+			var characterX = (data['gamestate']['playerstates'][index]['currentSpace']['posX']-1)*widthBlock+50;
+			var characterY = (data['gamestate']['playerstates'][index]['currentSpace']['posY']-1)*heightBlock+50;
+			//Adjust character locations to make them unique
+			characterX += (index % 3) * 40;
+			if(index >= 3){
+				characterY += 40;
+			}
+			//Check to see if player has been initialized
+			if(characterId in players){
+				//Update current location
+				players[characterId].getGamePiece().x = characterX;
+				players[characterId].getGamePiece().y = characterY;
+			}else{
+				//Create object and set current location
+				players[characterId] = new Player(
+					characterColor,
+					characterX,
+					characterY
+				);
+				//Add player to stage
+				stage.addChild(players[characterId].createGamePiece());
+			}
+		}
+		//Update canvas
+		stage.update();
+	}
+}
+
+function getGameState(url, game_id, player_id, cached_game_seq){
+	//Post to server
+	$.post(
+	   url,
+	   {game_id:game_id, player_id:player_id, cached_game_seq:cached_game_seq}
+	).done(function(data){
+	   updateGameState(data);
+	   return data;
+	});
+}
 
 function getCookie(name) {
     var cookieValue = null;
