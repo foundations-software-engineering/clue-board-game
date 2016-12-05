@@ -580,6 +580,52 @@ class GameModelTests(TestCase):
         self.assertEqual(len(gsj['playerstates']), 2)
 
 
+class TurnModelTests(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.c1 = Card.objects.all()[0]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    #def test_
+
+
 class WhoWhatWhereModelTests(TestCase):
 
     def test_compare_true_when_equal(self):

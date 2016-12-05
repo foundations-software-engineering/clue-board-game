@@ -199,10 +199,13 @@ def playerturn(request, game_id):
 				template = loader.get_template('clueless/makeAccusation.html')
 
 			elif player_move == "makeSuggestion":
-				#TODO: check whether it is valid for user to make suggestion
+				try:
+					context['room'] = Room.objects.get(id=player.currentSpace.spaceCollector.id)
+				except Room.DoesNotExist:
+					logger.error('player must be in a room to make a suggestion')
+					return HttpResponse(status=403, content="player must be in a room to make a suggestion")
 				ds = player.getDetectiveSheet()
 				context['characterSheetItems'] = ds.getCharacterSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
-				context['roomSheetItems'] = ds.getRoomSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
 				context['weaponSheetItems'] = ds.getWeaponSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
 				context['player'] = player
 				template = loader.get_template('clueless/makeSuggestion.html')

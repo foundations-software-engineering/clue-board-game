@@ -2,7 +2,10 @@ from django.db import models
 from django.contrib.auth.models import User
 
 import datetime
+import logging
 import random
+
+logger = logging.getLogger(__name__)
 
 """
 Implementation of status enum as a Django IntergerField of choices
@@ -15,7 +18,6 @@ STATUS_CHOICES = (
     (STARTED, 'Started'),
     (COMPLETE, 'Complete'),
 )
-
 
 class Board(models.Model):
     """
@@ -49,16 +51,22 @@ class Player(models.Model):
     """
     Represents a player in the context of a clueless game.  Ties back to Django user
     """
-    user = models.ForeignKey(User, blank=True, null=True) #only should be null for non-user players
-    nonUserPlayer = models.BooleanField(default = False)
+    user = models.ForeignKey(User, blank=True, null=True)  # only should be null for non-user players
+    nonUserPlayer = models.BooleanField(default=False)
     currentSpace = models.ForeignKey(Space)
     currentGame = models.ForeignKey('Game', blank=True, null=True) # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
 
+
     def __str__(self):
-        return("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
-            self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
-        ))
+        if self.user is None:
+            return ("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
+                "No User", self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
+            ))
+        else:
+            return("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
+                self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
+            ))
 
     def getDetectiveSheet(self):
         """
@@ -156,6 +164,26 @@ class Turn(models.Model):
     player = models.ForeignKey(Player)
     game = models.ForeignKey('Game') #Game class not defined yet, referencing by string
 
+    def __validate_action(self, action):
+        if action.__class__ == Accusation:
+            if Accusation.objects.filter(turn = self).count() > 1:
+                logger.error("accusation already made")
+                return False
+        elif action.__class__ == Suggestion:
+            if Suggestion.objects.filter(turn = self).count() > 1:
+                logger.error("suggestion already made")
+                return False
+            elif Accusation.objects.filter(turn = self).count() > 1:
+                logger.error("accusation already made")
+                return False
+            return True
+        elif action.__class__ == Move:
+            if Action.objects.filter(turn = self).count() > 1:
+                logger.error("move must be first action")
+                return False
+            return True
+        return False
+
     def getAvailableActions(self):
         """
         :return: Set of Action subclass class objects that can be taken at this point
@@ -169,6 +197,8 @@ class Turn(models.Model):
         :param action: Subclass of Action, which will have its performAction function called
         :return:
         """
+        if not self.__validate_action(action):
+            return ("Unable to perform action")
         if action.validate():
             action.performAction()
             return(None)
@@ -219,12 +249,21 @@ class Suggestion(Action):
         return(s)
 
     def validate(self):
-        #TODO: actually implement
+        #make sure user is in room
+        if self.whoWhatWhere.room.id != self.turn.player.currentSpace.spaceCollector.id:
+            return False
         return True
 
     def performAction(self):
-        #TODO: actually perform action
-        pass
+        #move player being suggested
+        accusedCharacter = self.whoWhatWhere.character
+        print(accusedCharacter)
+        print(self.turn.game)
+        accusedPlayer = Player.objects.get(currentGame = self.turn.game, character = accusedCharacter)
+        accusedSpace = Space.objects.get(spaceCollector = self.whoWhatWhere.room)
+        #move player
+        accusedPlayer.currentSpace = accusedSpace
+        accusedPlayer.save()
 
 
 class Accusation(Action):
@@ -349,10 +388,17 @@ class Game(models.Model):
             dsIndex = i % len(detectiveSheets)
             detectiveSheets[dsIndex].makeNote(cardList[i], True, True)
 
+<<<<<<< HEAD
         #create all the nonUser players for remaining characters
         #must happen after detectiveSheet logic because these players don't get detectiveSheets
         for c in self.unusedCharacters():
             nonUserPlayer = Player(character=c, currentSpace=c.defaultSpace, currentGame = self, nonUserPlayer = True)
+=======
+        # create all the nonUser players for remaining characters
+        # must happen after detectiveSheet logic because these players don't get detectiveSheets
+        for c in self.unusedCharacters():
+            nonUserPlayer = Player(character=c, currentSpace=c.defaultSpace, currentGame=self, nonUserPlayer=True)
+>>>>>>> Added turn and suggestion validation/perform
             nonUserPlayer.save()
 
         self.save()

@@ -2,8 +2,11 @@
 <form class="form-suggestion" action="{% url 'make_suggestion_controller' game.id player.id %}" method="post" id="suggestionTurnForm" >{%csrf_token%}
 	<input type="hidden" name="game_id" value="{{ game.id }}" />
     <input type="hidden" name="player_id" value="{{ player.id }}" />
+    <input type="hidden" name="room_id" value="{{ room.card_id }}" />
 
     <h2 class="form-suggestion-heading">What is your Suggestion?</h2>
+	 <br>
+    <h4>Room: {{ room.name }}</h4>
 	 <br>
 	  <label for="suggestion_suspect">Select suspect:</label>
 		<select class="form-control" name="suspect_id" id="suggestion_suspect">
@@ -17,23 +20,6 @@
                         {{ csi.card.name }} &nbsp;&nbsp;[card shown]
                     {% else %}
                         {{ csi.card.name }}
-                    {% endif %}
-                </option>
-            {% endfor %}
-		</select>
-	<br>
-	<label for="suggestion_room">Select room:</label>
-		<select class="form-control" name="room_id" id="suggestion_room">
-            {% for rsi in roomSheetItems %}
-                <option value="{{ rsi.card.card_id }}" aria-hidden="true">
-                    {% if rsi.initiallyDealt %}
-                        {{ rsi.card.name }} &nbsp;&nbsp;[dealt initially]
-                    {% elif rsi.checked and rsi.manuallyChecked %}
-                        {{ rsi.card.name }} &nbsp;&nbsp;[hunch]
-                    {% elif rsi.checked %}
-                        {{ rsi.card.name }} &nbsp;&nbsp;[card shown]
-                    {% else %}
-                        {{ rsi.card.name }}
                     {% endif %}
                 </option>
             {% endfor %}
