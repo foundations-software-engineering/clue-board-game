@@ -206,11 +206,17 @@ class Turn(models.Model):
         else:
             return("Unable to perform action")
 
-    def endTurn(self):
+    def endTurn(self, game, player):
         """
         Ends this turn
         """
         pass
+    #     nextTurn = Turn(stuff, in, here)
+    # nextTurn.save()
+    # self.game.currentTurn = nextTurn
+    # # self.game.save()
+    #     players =
+    #     nextTurn = Turn.objects.get(game=self.currentGame__id, )
 
 
 class Action(models.Model):

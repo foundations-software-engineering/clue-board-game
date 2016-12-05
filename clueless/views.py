@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Board, Card, Character, Game, Player, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -347,6 +347,7 @@ def start_game_controller(request):
 
 		# kewl, we are done now.  Let's send our user to the game interface
 		return redirect('begingame', game_id = game.id)
+
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
@@ -385,6 +386,10 @@ def join_game_controller(request):
 		#creates a player object for the new user
 		player = Player(user=user, character=character, currentSpace=character.defaultSpace)
 		player.save()
+
+		#creates a turn for each player
+		turn = Turn(player=player, game=game, status=0)
+		turn.save()
 
 		# adds user/player to game
 		if game.status != 0:
