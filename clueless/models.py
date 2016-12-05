@@ -155,7 +155,6 @@ class Turn(models.Model):
     """
     player = models.ForeignKey(Player)
     game = models.ForeignKey('Game') #Game class not defined yet, referencing by string
-    status = models.IntegerField(choices=STATUS_CHOICES, default=1)
 
     def getAvailableActions(self):
         """
@@ -170,8 +169,11 @@ class Turn(models.Model):
         :param action: Subclass of Action, which will have its performAction function called
         :return:
         """
-        #TODO: implement this method
-        return(None)
+        if action.validate():
+            action.performAction()
+            return(None)
+        else:
+            return("Unable to perform action")
 
     def endTurn(self):
         """
@@ -186,7 +188,6 @@ class Action(models.Model):
     """
     turn = models.ForeignKey(Turn, blank=True)
     description = models.CharField(max_length=255, blank=True)
-    status = models.IntegerField(choices=STATUS_CHOICES, default=1)
 
     def validate(self):
         """
@@ -206,6 +207,24 @@ class Suggestion(Action):
     A suggestion action taken by the player
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
+
+    @classmethod
+    def createSuggestion(cls, turn, suspect, room, weapon):
+        s = Suggestion()
+        s.turn = turn
+        www = WhoWhatWhere(character = suspect, room = room, weapon = weapon)
+        www.save()
+        s.whoWhatWhere = www
+        s.save()
+        return(s)
+
+    def validate(self):
+        #TODO: actually implement
+        return True
+
+    def performAction(self):
+        #TODO: actually perform action
+        pass
 
 
 class Accusation(Action):
@@ -258,6 +277,7 @@ class Game(models.Model):
     hostPlayer = models.ForeignKey(Player)
     name = models.CharField(max_length=60)
     currentSequence = models.IntegerField(default = 0)
+    currentTurn = models.ForeignKey(Turn, related_name='currentTurn', blank=True, null=True)
 
     def initializeGame(self, playerHost):
         """
@@ -298,6 +318,11 @@ class Game(models.Model):
             raise RuntimeError('Game can only be started by host')
         else:
             self.status = STARTED
+
+        turn = Turn(game = self, player = self.hostPlayer)
+        turn.save()
+        self.currentTurn = turn
+        self.save()
 
         #get all of the games detective sheets
         detectiveSheetsQS = DetectiveSheet.objects.filter(game = self)
@@ -430,6 +455,7 @@ class Game(models.Model):
         return ("id: {}, name: {}".format(
             self.id, self.name
         ))
+
 
 class DetectiveSheet(models.Model):
     """
