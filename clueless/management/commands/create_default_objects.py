@@ -144,11 +144,11 @@ class Command(BaseCommand):
         s01_05.save()
 
         # create 6 default characters
-        Character(name="Miss Scarlet", defaultSpace=s04_01).save()
-        Character(name="Col. Mustard", defaultSpace=s05_02).save()
-        Character(name="Mrs. White", defaultSpace=s04_05).save()
-        Character(name="Mr. Green", defaultSpace=s02_05).save()
-        Character(name="Mrs. Peacock", defaultSpace=s01_04).save()
-        Character(name="Prof. Plum", defaultSpace=s01_02).save()
+        Character(name="Miss Scarlet", defaultSpace=s04_01, characterColor="Red").save()
+        Character(name="Col. Mustard", defaultSpace=s05_02, characterColor="Yellow").save()
+        Character(name="Mrs. White", defaultSpace=s04_05, characterColor="White").save()
+        Character(name="Mr. Green", defaultSpace=s02_05, characterColor="Green").save()
+        Character(name="Mrs. Peacock", defaultSpace=s01_04, characterColor="Blue").save()
+        Character(name="Prof. Plum", defaultSpace=s01_02, characterColor="Purple").save()
 
         print("Finished!")

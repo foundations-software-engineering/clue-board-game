@@ -112,6 +112,7 @@ class Character(Card):
     Represents each character in the game clue (the actual character, like Mr. Green)
 	"""
     defaultSpace = models.ForeignKey(Space)
+    characterColor = models.CharField(max_length=30)
 
 
 class Weapon(Card):
@@ -392,7 +393,7 @@ class Game(models.Model):
             pData = {
                 'player_id':p.id,
                 'username':p.user.username,
-                'character':{'character_id':c.card_id, 'character_name':c.name},
+                'character':{'character_id':c.card_id, 'character_name':c.name, 'character_color':c.characterColor},
                 'currentSpace':{'space_id':s.id, 'posX':s.posX, 'posY':s.posY}
             }
 
