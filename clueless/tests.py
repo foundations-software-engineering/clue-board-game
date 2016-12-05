@@ -1344,3 +1344,172 @@ class PlayGameViewTest(TestCase):
         self.c.force_login(self.user1)
         response = self.c.get(url)
         self.assertEqual(response.url, reverse('begingame', args=[self.game1.id]))
+
+
+#tests for controller views
+
+class MakeSuggestionControllerTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # get client
+        cls.c = Client()
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.c1 = Card.objects.all()[0]
+
+        cls.character = Character.objects.all()[0]
+        cls.goodRoom = Room.objects.get(id=cls.player1.currentSpace.spaceCollector.id)
+        cls.weapon = Weapon.objects.all()[0]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_user_must_be_logged_in(self):
+        url = reverse('make_suggestion_controller',args=[self.game1.id,self.player1.id])
+        response = self.c.post(url, {'suspect_id':self.character.card_id, 'room_id':self.goodRoom.card_id, 'weapon_id':self.weapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_post_not_allowed(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_no_parameters_sent(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {})
+
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_suspect_id_parameter_not_sent(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'room_id': self.goodRoom.card_id, 'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_room_id_parameter_not_sent(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_weapon_id_parameter_not_sent(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_bad_game_id(self):
+        url = reverse('make_suggestion_controller', args=[0, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_player_id(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, 0])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_suspect_id(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': 0, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_room_id(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': 0,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_weapon_id(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': 0})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_user_doesnt_match_player(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user2)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_player_not_in_game(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.playerNotInGame.id])
+        self.c.force_login(self.user3)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_not_players_turn(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player2.id])
+        self.c.force_login(self.user2)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_wrong_room(self):
+        badRoom = Room.objects.exclude(id=self.player1.currentSpace.spaceCollector.id)[0]
+
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': badRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 500)
+
+    def test_create_suggestion_when_valid(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(Suggestion.objects.filter(turn = self.game1.currentTurn).count(), 1)
+
+    def test_produce_http200_when_valid(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 200)

@@ -258,8 +258,6 @@ class Suggestion(Action):
     def performAction(self):
         #move player being suggested
         accusedCharacter = self.whoWhatWhere.character
-        print(accusedCharacter)
-        print(self.turn.game)
         accusedPlayer = Player.objects.get(currentGame = self.turn.game, character = accusedCharacter)
         accusedSpace = Space.objects.get(spaceCollector = self.whoWhatWhere.room)
         #move player
