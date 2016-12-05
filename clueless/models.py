@@ -419,6 +419,10 @@ class Game(models.Model):
             nonUserPlayer = Player(character=c, currentSpace=c.defaultSpace, currentGame = self, nonUserPlayer = True)
             nonUserPlayer.save()
 
+        #adds current turn to game
+        player = Player.objects.get(user=user, currentGame=self)
+        self.currentTurn = Turn.objects.get(player=player, game=self)
+
         self.save()
         self.registerGameUpdate()
 
