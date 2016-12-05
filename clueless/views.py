@@ -494,6 +494,8 @@ def make_suggestion_controller(request, game_id, player_id):
 	if actionStatus is not None:
 		return(HttpResponse(status = 500, content = "error making suggestion"))
 
+	game.registerGameUpdate()
+
 	request.method = "GET"
 	return playerturn(request, game_id)
 

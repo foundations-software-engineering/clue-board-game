@@ -1507,6 +1507,14 @@ class MakeSuggestionControllerTest(TestCase):
                                      'weapon_id': self.weapon.card_id})
         self.assertEqual(Suggestion.objects.filter(turn = self.game1.currentTurn).count(), 1)
 
+    def test_increment_game_state_when_valid(self):
+        cachedState = self.game1.currentSequence
+        url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.weapon.card_id})
+        self.assertNotEqual(cachedState, Game.objects.get(id = self.game1.id).currentSequence)
+
     def test_produce_http200_when_valid(self):
         url = reverse('make_suggestion_controller', args=[self.game1.id, self.player1.id])
         self.c.force_login(self.user1)
