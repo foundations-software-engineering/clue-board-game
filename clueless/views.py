@@ -179,23 +179,31 @@ def playgame(request, game_id):
 	return HttpResponse(template.render(context,request))
 
 @login_required
-def playerturn(request, game_id):
+
+def playerturn(request):
+	context = {}
 	template = loader.get_template('clueless/playerturn.html')
 
+	#get request variables
+	user_id = request.user
+	#mocked for now, will get for real in jerrold's branch
+	game_id =2
 	game = Game.objects.get(id=game_id)
-	context = {}
-	context['game'] = game
+	player = Player.objects.get(user = user_id, game=game)
+
+	if request.method == 'GET':
+		if player.compare(game.currentTurn.player):
+			print("is turn")
+			context['isPlayerTurn'] = 'true'
+		else:
+			print("is not turn")
+			context['isPlayerTurn'] = 'false'
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
 			#store variables for easier usage
-			user_id = request.user
 			player_move = request.POST['player_move']
 			new_position = request.POST['new_position']
-			#mocked for now, will get in jerrold's branch
-			game_id = 2
-			game = Game.objects.get(id=game_id)
-			player = Player.objects.get(user = user_id, game=game)
 			
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
@@ -444,10 +452,6 @@ def begin_game_controller(request):
 		#check conditions, start game if conditions met
 		game.startGame(request.user)
 		game.save()
-
-		#check conditions, start game if conditions met
-		player = Player.objects.get(user=request.user, currentGame=game)
-		game.currentTurn = Turn.objects.get(player=player, game=game)
 
 		# kewl, we are done now.  Let's send our user to the game interface
 		return redirect('playgame', game_id = game.id)
