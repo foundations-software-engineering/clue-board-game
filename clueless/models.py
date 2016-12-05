@@ -49,7 +49,8 @@ class Player(models.Model):
     """
     Represents a player in the context of a clueless game.  Ties back to Django user
     """
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, blank=True, null=True) #only should be null for non-user players
+    nonUserPlayer = models.BooleanField(default = False)
     currentSpace = models.ForeignKey(Space)
     currentGame = models.ForeignKey('Game', blank=True, null=True) # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
@@ -322,6 +323,12 @@ class Game(models.Model):
         for i in range(0, len(cardList)):
             dsIndex = i % len(detectiveSheets)
             detectiveSheets[dsIndex].makeNote(cardList[i], True, True)
+
+        #create all the nonUser players for remaining characters
+        #must happen after detectiveSheet logic because these players don't get detectiveSheets
+        for c in self.unusedCharacters():
+            nonUserPlayer = Player(character=c, currentSpace=c.defaultSpace, currentGame = self, nonUserPlayer = True)
+            nonUserPlayer.save()
 
         self.save()
         self.registerGameUpdate()

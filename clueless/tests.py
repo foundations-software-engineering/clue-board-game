@@ -395,17 +395,6 @@ class GameModelTests(TestCase):
             Card.objects.all().count() - 3)
 
     def test_startGame_doesnt_deal_casefile_cards(self):
-
-        self.g.initializeGame(self.player1)
-        self.g.save()
-        self.g.addPlayer(self.player1)
-        self.g.addPlayer(self.player2)
-        self.g.startGame(self.user1)
-        self.assertEqual(
-            SheetItem.objects.filter(detectiveSheet__game = self.g, checked = True, initiallyDealt = True).count(),
-            Card.objects.all().count() - 3)
-
-    def test_startGame_doesnt_deal_casefile_cards(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
@@ -451,6 +440,16 @@ class GameModelTests(TestCase):
             SheetItem.objects.filter(detectiveSheet=p2ds, initiallyDealt=True, checked=True).count(),
             0)
 
+    def test_startGame_nonUserPlayers_created(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        self.assertEqual(Player.objects.filter(currentGame = self.g).count(), Character.objects.all().count())
+        self.assertEqual(Player.objects.filter(currentGame=self.g, nonUserPlayer = True).count(), Character.objects.all().count() - 2)
+
     def test_unusedCharacters_returns_all_when_no_players(self):
         self.g.initializeGame(self.player1)
         self.g.save()
@@ -463,7 +462,7 @@ class GameModelTests(TestCase):
         self.assertEqual(self.g.unusedCharacters().count(), 5)
         self.assertNotIn(self.player1.character, self.g.unusedCharacters())
 
-    def test_unusedCharacters_correct_when_1_player(self):
+    def test_unusedCharacters_correct_when_2_player(self):
         self.g.initializeGame(self.player1)
         self.g.save()
         self.g.addPlayer(self.player1)
@@ -1024,6 +1023,7 @@ class ManualSheetItemCheckViewTest(TestCase):
         )
 
         self.assertEqual(si.count(), 1)
+
 
 class PlayGameViewTest(TestCase):
 
