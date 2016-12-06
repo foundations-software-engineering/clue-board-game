@@ -1,7 +1,7 @@
 {% load static %}
 
 {% if isPlayerTurn %}
-<form class="form-playerturn" action="{% url 'playerturn' %}" method="post" id="playerTurnForm" >{%csrf_token%}
+<form class="form-playerturn" action="{% url 'playerturn' game.id %}" method="post" id="playerTurnForm" >{%csrf_token%}
 	<h2 class="form-playerturn-heading">It is your turn! what is your move?</h2>
 	 <br>
 	  <label for="player_move">Select move:</label>
