@@ -1,8 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
-import datetime
+import logging
 import random
+
+logger = logging.getLogger(__name__)
 
 """
 Implementation of status enum as a Django IntergerField of choices
@@ -15,7 +18,6 @@ STATUS_CHOICES = (
     (STARTED, 'Started'),
     (COMPLETE, 'Complete'),
 )
-
 
 class Board(models.Model):
     """
@@ -49,16 +51,22 @@ class Player(models.Model):
     """
     Represents a player in the context of a clueless game.  Ties back to Django user
     """
-    user = models.ForeignKey(User, blank=True, null=True) #only should be null for non-user players
-    nonUserPlayer = models.BooleanField(default = False)
+    user = models.ForeignKey(User, blank=True, null=True)  # only should be null for non-user players
+    nonUserPlayer = models.BooleanField(default=False)
     currentSpace = models.ForeignKey(Space)
     currentGame = models.ForeignKey('Game', blank=True, null=True) # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
 
+
     def __str__(self):
-        return("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
-            self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
-        ))
+        if self.user is None:
+            return ("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
+                "No User", self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
+            ))
+        else:
+            return("user: {}, currentSpace: {}, currentGame: {}, character: {}".format(
+                self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
+            ))
 
     def getDetectiveSheet(self):
         """
@@ -155,7 +163,27 @@ class Turn(models.Model):
     """
     player = models.ForeignKey(Player)
     game = models.ForeignKey('Game') #Game class not defined yet, referencing by string
-    status = models.IntegerField(choices=STATUS_CHOICES, default=1)
+
+    def __validate_action(self, action):
+        if action.__class__ == Accusation:
+            if Accusation.objects.filter(turn = self).count() > 1:
+                logger.error("accusation already made")
+                return False
+            return True
+        elif action.__class__ == Suggestion:
+            if Suggestion.objects.filter(turn = self).count() > 1:
+                logger.error("suggestion already made")
+                return False
+            elif Accusation.objects.filter(turn = self).count() > 0:
+                logger.error("accusation already made")
+                return False
+            return True
+        elif action.__class__ == Move:
+            if Action.objects.filter(turn = self).count() > 1:
+                logger.error("move must be first action")
+                return False
+            return True
+        return False
 
     def getAvailableActions(self):
         """
@@ -170,8 +198,13 @@ class Turn(models.Model):
         :param action: Subclass of Action, which will have its performAction function called
         :return:
         """
-        #TODO: implement this method
-        return(None)
+        if not self.__validate_action(action):
+            return ("Unable to perform action")
+        if action.validate():
+            action.performAction()
+            return(None)
+        else:
+            return("Unable to perform action")
 
     def endTurn(self):
         """
@@ -186,7 +219,6 @@ class Action(models.Model):
     """
     turn = models.ForeignKey(Turn, blank=True)
     description = models.CharField(max_length=255, blank=True)
-    status = models.IntegerField(choices=STATUS_CHOICES, default=1)
 
     def validate(self):
         """
@@ -207,12 +239,45 @@ class Suggestion(Action):
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
 
+    @classmethod
+    def createSuggestion(cls, turn, suspect, room, weapon):
+        s = Suggestion()
+        s.turn = turn
+        www = WhoWhatWhere(character = suspect, room = room, weapon = weapon)
+        www.save()
+        s.whoWhatWhere = www
+        s.save()
+        return(s)
+
+    def validate(self):
+        #make sure user is in room
+        if self.whoWhatWhere.room.id != self.turn.player.currentSpace.spaceCollector.id:
+            return False
+        return True
+
+    def performAction(self):
+        #move player being suggested
+        accusedCharacter = self.whoWhatWhere.character
+        accusedPlayer = Player.objects.get(currentGame = self.turn.game, character = accusedCharacter)
+        accusedSpace = Space.objects.get(spaceCollector = self.whoWhatWhere.room)
+        #move player
+        accusedPlayer.currentSpace = accusedSpace
+        accusedPlayer.save()
+
 
 class Accusation(Action):
     """
     An accusation action taken by the player.  Either the player wins the game or they lose!
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
+
+    def validate(self):
+        #TODO: implement
+        return True
+
+    def performAction(self):
+        # TODO: implement
+        pass
 
 
 class Move(Action):
@@ -221,6 +286,14 @@ class Move(Action):
     """
     fromSpace = models.ForeignKey(Space, related_name='fromSpace')
     toSpace = models.ForeignKey(Space, related_name='toSpace')
+
+    def validate(self):
+        #TODO: implement
+        return True
+
+    def performAction(self):
+        # TODO: implement
+        pass
 
 
 class CaseFile(WhoWhatWhere):
@@ -253,11 +326,12 @@ class Game(models.Model):
     caseFile = models.ForeignKey(CaseFile)
     board = models.ForeignKey(Board)
     status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
-    startTime = models.DateTimeField(default = datetime.datetime.now, blank = True)
-    lastUpdateTime = models.DateTimeField(default=datetime.datetime.now, blank=True)
+    startTime = models.DateTimeField(default = timezone.now(), blank = True)
+    lastUpdateTime = models.DateTimeField(default=timezone.now(), blank=True)
     hostPlayer = models.ForeignKey(Player)
     name = models.CharField(max_length=60)
     currentSequence = models.IntegerField(default = 0)
+    currentTurn = models.ForeignKey(Turn, related_name='currentTurn', blank=True, null=True)
 
     def initializeGame(self, playerHost):
         """
@@ -298,6 +372,11 @@ class Game(models.Model):
             raise RuntimeError('Game can only be started by host')
         else:
             self.status = STARTED
+
+        turn = Turn(game = self, player = self.hostPlayer)
+        turn.save()
+        self.currentTurn = turn
+        self.save()
 
         #get all of the games detective sheets
         detectiveSheetsQS = DetectiveSheet.objects.filter(game = self)
@@ -374,7 +453,7 @@ class Game(models.Model):
         """
         Updates the last update time to now, and increments the current game sequence
         """
-        self.lastUpdateTime = datetime.datetime.now()
+        self.lastUpdateTime = timezone.now()
         self.currentSequence = self.currentSequence + 1
         self.save()
 
@@ -397,12 +476,22 @@ class Game(models.Model):
         for p in players:
             c = p.character
             s = p.currentSpace
-            pData = {
-                'player_id':p.id,
-                'username':p.user.username,
-                'character':{'character_id':c.card_id, 'character_name':c.name, 'character_color':c.characterColor},
-                'currentSpace':{'space_id':s.id, 'posX':s.posX, 'posY':s.posY}
-            }
+            pData={}
+            if p.nonUserPlayer:
+                pData = {
+                    'player_id': p.id,
+                    'username': 'not a user',
+                    'character': {'character_id': c.card_id, 'character_name': c.name,
+                                  'character_color': c.characterColor},
+                    'currentSpace': {'space_id': s.id, 'posX': s.posX, 'posY': s.posY}
+                }
+            else:
+                pData = {
+                    'player_id':p.id,
+                    'username':p.user.username,
+                    'character':{'character_id':c.card_id, 'character_name':c.name, 'character_color':c.characterColor},
+                    'currentSpace':{'space_id':s.id, 'posX':s.posX, 'posY':s.posY}
+                }
 
             playerstates.append(pData)
 
@@ -430,6 +519,7 @@ class Game(models.Model):
         return ("id: {}, name: {}".format(
             self.id, self.name
         ))
+
 
 class DetectiveSheet(models.Model):
     """

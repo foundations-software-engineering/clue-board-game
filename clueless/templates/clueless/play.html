@@ -138,7 +138,7 @@
     function loadActionBar()
     {
         //Define the action bar URL
-        var url = {% url 'playerturn' %};
+        var url = "{% url 'playerturn' game.id %}";
         //Retrieve the HTML and load it
         $.get( url , function( data ) {
             $( "#actionBar" ).html( data );
