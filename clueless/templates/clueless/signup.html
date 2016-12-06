@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Create a New Account | ClueLess</title>
+
+    <!-- Bootstrap -->
+    <!-- Latest compiled and minified CSS -->
+    <!-- Bootstrap Core CSS -->
+    <link href="{% static 'clueless/css/bootstrap.min.css' %}"  rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
+
+    {% include "clueless/defaultNavbar.html" %}
+
+    <!-- Intro Section -->
+    <section id="intro" class="intro-section" style="margin-top:60px">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <form class="form-signup" action="" method="post">{% csrf_token %}
+                        <h2 class="form-signup-heading">Create a new Account</h2>
+                        {% if validationError  %}
+                        <p class="bg-danger">{{validationError}}</p>
+                        {% endif %}
+                        <br/>
+                        {% if usernameError  %}
+                        <p class="bg-danger">{{usernameError}}</p>
+                        {% endif %}
+                        <label for="username">Username</label>
+                            <input type="text" id="username" class="form-control" placeholder="Username" name="username" required autofocus {% if username %}value="{{username}}"{% endif %}>
+                        <br/>
+                        {% if emailError  %}
+                        <p class="bg-danger">{{emailError}}</p>
+                        {% endif %}
+                        <label for="email">Email</label>
+                            <input type="text" id="email" class="form-control" placeholder="Email" name="email" required autofocus {% if email %}value="{{email}}"{% endif %}>
+                        <br/>
+                        {% if passwordError  %}
+                        <p class="bg-danger">{{passwordError}}</p>
+                        {% endif %}
+                        <label for="password">Password</label>
+                            <input type="password" id="password" class="form-control" placeholder="Password" name="password" required>
+                        <br/>
+                        {% if password2Error  %}
+                        <p class="bg-danger">{{password2Error}}</p>
+                        {% endif %}
+                        <label for="password2">Re-enter Password</label>
+                            <input type="password" id="password2" class="form-control" placeholder="Re-Enter Password" name="password2" required>
+                        <br/>
+                        <button class="btn btn-lg btn-primary btn-block" type="submit">Create Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- jQuery -->
+    <script src="{% static 'clueless/js/jquery.js' %}"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="{% static 'clueless/js/bootstrap.min.js' %}"></script>
+
+    <!-- Scrolling Nav JavaScript -->
+    <script src="{% static 'clueless/js/jquery.easing.min.js' %}"></script>
+
+    <!-- App Specific JS -->
+    <script src="{% static 'clueless/js/lobby.js' %}"></script>
+
+    <script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
+    <script src="https://code.createjs.com/preloadjs-0.6.2.min.js"></script>
+
+    <script type="text/javascript">
+
+
+    $(document).ready(function(){
+
+    });
+    </script>
+  </body>
+</html>

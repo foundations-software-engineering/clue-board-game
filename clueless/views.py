@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.validators import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
@@ -60,6 +61,55 @@ def logout(request):
 	auth_logout(request)
 	logger.info('did we get here?')
 	return redirect('index')
+
+def signup(request):
+	"""
+	Provides a page for users to create new accounts
+	:param request:
+	:return:
+	"""
+	context = {}
+	hasError = False
+
+	if request.method == "POST":
+		username = request.POST.get('username')
+		email = request.POST.get('email')
+		pw1 = request.POST.get('password')
+		pw2 = request.POST.get('password2')
+
+		context['username'] = username
+		context['email'] = email
+
+		if username is None:
+			hasError = True
+			context['usernameError'] = "Username cannot be blank"
+		elif User.objects.filter(username = username).count() > 0:
+			hasError = True
+			context['usernameError'] = "Username already taken"
+
+		if email is None:
+			hasError = True
+			context['emailError'] = "Username cannot be blank"
+
+		if pw1 is None:
+			hasError = True
+			context['passwordError'] = "Password cannot be blank"
+		elif pw1 != pw2:
+			hasError = True
+			context['password2Error'] = "Passwords are not the same"
+
+		if not hasError:
+			try:
+				user = User.objects.create_user(username=username,
+												email=email,
+												password=pw1)
+				user.save()
+				return redirect('login')
+			except ValidationError as ve:
+				context['validationError'] = ve.message
+
+	template = loader.get_template('clueless/signup.html')
+	return HttpResponse(template.render(context, request))
 
 @login_required
 def lobby(request):
