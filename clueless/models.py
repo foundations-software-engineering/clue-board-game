@@ -295,6 +295,7 @@ class Move(Action):
         # TODO: implement
         pass
 
+
 class CaseFile(WhoWhatWhere):
     """
     Class to be used for the secret CaseFile for a Game
@@ -475,12 +476,22 @@ class Game(models.Model):
         for p in players:
             c = p.character
             s = p.currentSpace
-            pData = {
-                'player_id':p.id,
-                'username':p.user.username,
-                'character':{'character_id':c.card_id, 'character_name':c.name, 'character_color':c.characterColor},
-                'currentSpace':{'space_id':s.id, 'posX':s.posX, 'posY':s.posY}
-            }
+            pData={}
+            if p.nonUserPlayer:
+                pData = {
+                    'player_id': p.id,
+                    'username': 'not a user',
+                    'character': {'character_id': c.card_id, 'character_name': c.name,
+                                  'character_color': c.characterColor},
+                    'currentSpace': {'space_id': s.id, 'posX': s.posX, 'posY': s.posY}
+                }
+            else:
+                pData = {
+                    'player_id':p.id,
+                    'username':p.user.username,
+                    'character':{'character_id':c.card_id, 'character_name':c.name, 'character_color':c.characterColor},
+                    'currentSpace':{'space_id':s.id, 'posX':s.posX, 'posY':s.posY}
+                }
 
             playerstates.append(pData)
 
