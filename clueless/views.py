@@ -180,15 +180,15 @@ def playgame(request, game_id):
 
 @login_required
 
-def playerturn(request):
+def playerturn(request, game_id):
 	context = {}
 	template = loader.get_template('clueless/playerturn.html')
 
 	#get request variables
 	user_id = request.user
 	#mocked for now, will get for real in jerrold's branch
-	game_id = 1
 	game = Game.objects.get(id = game_id)
+	context['game'] = game
 	player = Player.objects.get(user = user_id, currentGame=game)
 
 	if request.method == 'GET':
@@ -398,9 +398,8 @@ def join_game_controller(request):
 		#creates a player object for the new user
 		player = Player(user=user, character=character, currentSpace=character.defaultSpace)
 		player.save()
-
 		#creates a turn for each player
-		turn = Turn(player=player, game=game, status=0)
+		turn = Turn(player=player, game=game)
 		turn.save()
 
 		# adds user/player to game
