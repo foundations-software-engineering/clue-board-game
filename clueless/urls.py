@@ -23,6 +23,7 @@ urlpatterns = [
     url(r'^lobby/', views.lobby, name='lobby'),
     url(r'^login/', views.login, name='login'),
     url(r'^logout/', views.logout, name='logout'),
+    url(r'^signup/', views.signup, name='signup'),
     url(r'^play/(?P<game_id>\d+)/', views.playgame, name='playgame'),
     url(r'^startgame/', views.startgame, name='startgame'),
     url(r'^joingame/(?P<game_id>\d+)/', views.joingame, name='joingame'),

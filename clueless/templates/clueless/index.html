@@ -33,8 +33,32 @@
 
     {% include "clueless/defaultNavbar.html" %}
 
+     <div class="jumbotron" style="margin-top: 50px">
+      <div class="container">
+        <h1>Welcome to Clue-Less!</h1>
+        {% if not user.is_authenticated %}
+          <p><a class="btn btn-primary btn-lg" href="{% url 'signup' %}" role="button">Create an account and start playing!</a></p>
+          {% endif %}
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Example row of columns -->
+      <div class="row">
+
+        <div class="col-md-8">
+          <h2>Demo</h2>
+          <p>*Demo video to go here*</p>
+       </div>
+          <div class="col-md-4">
+          <h2>About Us</h2>
+            <p>This is the web page for "Software Unchained" team's implementation of Clue-Less for the Johns Hopkins University Foundations of Software Engineering class (605.401).</p>
+            <p>Team members are: Keith Chason, Rebecca Friedman, Grehg Hilston, Jerrold Vincent</p>
+        </div>
+      </div>
+
     <!-- Intro Section -->
-    <section id="intro" class="intro-section">
+    <!--<section id="intro" class="intro-section">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
@@ -50,10 +74,10 @@
             	<div class="col-lg-12" id="ajax_results"></div>
             </div>
         </div>
-    </section>
+    </section>-->
 
     <!-- About Section -->
-    <section id="about" class="about-section">
+    <!--<section id="about" class="about-section">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
@@ -64,9 +88,10 @@
             </div>
         </div>
     </section>
+    -->
 
     <!-- Services Section -->
-    <section id="start_game" class="services-section">
+    <!-- <section id="start_game" class="services-section">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
@@ -74,10 +99,10 @@
                 </div>
             </div>
         </div>
-    </section>
+    </section>-->
 
     <!-- Contact Section -->
-    <section id="rules" class="contact-section">
+    <!-- <section id="rules" class="contact-section">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
@@ -85,7 +110,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </section>-->
 
     <!-- jQuery -->
     <script src="{% static 'clueless/js/jquery.js' %}"></script>

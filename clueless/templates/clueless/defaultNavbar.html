@@ -31,6 +31,9 @@
                     </li>
                     {% else %}
                     <li>
+                        <a class="page-scroll" href="{% url 'signup' %}">Create an Account</a>
+                    </li>
+                    <li>
                         <a class="page-scroll" href="{% url 'login' %}">Login</a>
                     </li>
                     {% endif %}
