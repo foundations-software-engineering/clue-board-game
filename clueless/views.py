@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Action, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Action, Move, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -196,6 +196,7 @@ def playerturn(request, game_id):
 			context['isPlayerTurn'] = True
 		else:
 			context['isPlayerTurn'] = False
+		context['roomObjects'] = Room.objects.all()
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
@@ -224,10 +225,20 @@ def playerturn(request, game_id):
 				template = loader.get_template('clueless/makeSuggestion.html')
 
 			elif player_move == "moveSpace":
-				#TODO: logic for confirming space is valid
-				new_position = request.POST['new_position']
+				new_room = request.POST['new_position']
 
-				print("checking if player " + str(user_id) + " can move to " + new_position + " from " + str(player.currentSpace))
+				#get space on board based on room and create Move
+				new_space = Space.objects.get(spaceCollector__id = new_room)
+				move = Move(fromSpace = player.currentSpace, toSpace = new_space)
+				
+				#validate the move
+				canMove = move.validate()
+				if canMove:
+					player.currentSpace = new_space
+					player.save()
+				else:
+					logger.error("Player cannot be moved to the ", new_room)
+
 			elif player_move =="endTurn":
 				turn = Turn.objects.get(player=player, game=game)
 				turn.endTurn()

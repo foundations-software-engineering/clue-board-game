@@ -12,19 +12,15 @@
 		  <option value="endTurn">End your turn</option>
 		</select>
 	<br>
-	<!--hard coded for now, but TODO: add JS to only display this if Move To was selected, also to exclude the current space-->
+	<!--hard coded for now, but TODO: exclude the current space-->
 	<br>
 	  <label for="new_position" id=new_position_label>Move to the:</label>
 		<select class="form-control" name="new_position" id="new_position">
-		  <option value="study">Study</option>
-		  <option value="hall">Hall</option>
-		  <option value="lounge">Lounge</option>
-		  <option value="library">Library</option>
-		  <option value="billiardRoom">Billiard Room</option>
-		  <option value="diningRoom">Dining Room</option>
-		  <option value="conservatory">Conservatory</option>
-		  <option value="ballroom">Ballroom</option>
-		  <option value="kitchen">Kitchen</option>
+		{% for room in roomObjects %}
+			<option value="{{room.id}}" aria-hidden="true">
+				{{room.name}}
+			</option>
+		{% endfor %}
 		</select>
 	<br>
 <button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
