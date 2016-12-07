@@ -219,8 +219,10 @@ class Turn(models.Model):
             if player.compare(currentPlayer):
                 next_player = players[(i+1) % len(players)]
                 break
-        nextTurn = Turn.objects.get(player=next_player, game=self.game)
-        self.game.currentTurn = nextTurn
+        #creates a turn for next player
+        turn = Turn(player=next_player, game=self.game)
+        turn.save()
+        self.game.currentTurn = turn
         self.game.save()
 
 class Action(models.Model):

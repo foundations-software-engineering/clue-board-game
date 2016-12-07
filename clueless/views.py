@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Action, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -203,6 +203,10 @@ def playerturn(request, game_id):
 			player_move = request.POST['player_move']
 			new_position = request.POST['new_position']
 			
+
+			#create action for the player
+			playerAction = Action(turn=game.currentTurn, description=player_move)
+
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
 				template = loader.get_template('clueless/makeAccusation.html')
@@ -222,6 +226,7 @@ def playerturn(request, game_id):
 			elif player_move == "moveSpace":
 				#TODO: logic for confirming space is valid
 				new_position = request.POST['new_position']
+
 				print("checking if player " + str(user_id) + " can move to " + new_position + " from " + str(player.currentSpace))
 			elif player_move =="endTurn":
 				turn = Turn.objects.get(player=player, game=game)
@@ -398,9 +403,6 @@ def join_game_controller(request):
 		#creates a player object for the new user
 		player = Player(user=user, character=character, currentSpace=character.defaultSpace)
 		player.save()
-		#creates a turn for each player
-		turn = Turn(player=player, game=game)
-		turn.save()
 
 		# adds user/player to game
 		if game.status != 0:
