@@ -191,19 +191,17 @@ def playerturn(request, game_id):
 	context['game'] = game
 	player = Player.objects.get(user = user_id, currentGame=game)
 
-	if request.method == 'GET':
-		if player.compare(game.currentTurn.player):
-			context['isPlayerTurn'] = True
-		else:
-			context['isPlayerTurn'] = False
-		context['roomObjects'] = Room.objects.all()
+	if player.compare(game.currentTurn.player):
+		context['isPlayerTurn'] = True
+	else:
+		context['isPlayerTurn'] = False
+	context['roomObjects'] = Room.objects.all()
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
 			#store variables for easier usage
-			player_move = request.POST['player_move']
-			new_position = request.POST['new_position']
-			
+			player_move = request.POST.get('player_move')
+			new_position = request.POST.get('new_position')
 
 			#create action for the player
 			playerAction = Action(turn=game.currentTurn, description=player_move)
@@ -225,7 +223,7 @@ def playerturn(request, game_id):
 				template = loader.get_template('clueless/makeSuggestion.html')
 
 			elif player_move == "moveSpace":
-				new_room = request.POST['new_position']
+				new_room = request.POST.get('new_position')
 
 				#get space on board based on room and create Move
 				new_space = Space.objects.get(spaceCollector__id = new_room)
@@ -236,6 +234,7 @@ def playerturn(request, game_id):
 				if canMove:
 					player.currentSpace = new_space
 					player.save()
+					game.registerGameUpdate()
 				else:
 					logger.error("Player cannot be moved to the ", Room.objects.get(id=new_room))
 
