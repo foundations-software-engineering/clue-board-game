@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Board, Card, Character, Game, Player, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Action, Move, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -179,21 +179,33 @@ def playgame(request, game_id):
 	return HttpResponse(template.render(context,request))
 
 @login_required
+
 def playerturn(request, game_id):
+	context = {}
 	template = loader.get_template('clueless/playerturn.html')
 
-	game = Game.objects.get(id=game_id)
-	context = {}
+	#get request variables
+	user_id = request.user
+	#mocked for now, will get for real in jerrold's branch
+	game = Game.objects.get(id = game_id)
 	context['game'] = game
+	player = Player.objects.get(user = user_id, currentGame=game)
+
+	if player.compare(game.currentTurn.player):
+		context['isPlayerTurn'] = True
+	else:
+		context['isPlayerTurn'] = False
+	context['roomObjects'] = Room.objects.all()
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
 			#store variables for easier usage
-			user_id = request.user
-			player_move = request.POST['player_move']
+			player_move = request.POST.get('player_move')
+			new_position = request.POST.get('new_position')
 
-			player = Player.objects.get(user = user_id, game = game)
-			
+			#create action for the player
+			playerAction = Action(turn=game.currentTurn, description=player_move)
+
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
 				template = loader.get_template('clueless/makeAccusation.html')
@@ -211,9 +223,24 @@ def playerturn(request, game_id):
 				template = loader.get_template('clueless/makeSuggestion.html')
 
 			elif player_move == "moveSpace":
-				#TODO: logic for confirming space is valid
-				new_position = request.POST['new_position']
-				print("checking if player " + str(user_id) + " can move to " + new_position + " from " + str(player.currentSpace))
+				new_room = request.POST.get('new_position')
+
+				#get space on board based on room and create Move
+				new_space = Space.objects.get(spaceCollector__id = new_room)
+				move = Move(fromSpace = player.currentSpace, toSpace = new_space)
+
+				#validate the move
+				canMove = move.validate()
+				if canMove:
+					player.currentSpace = new_space
+					player.save()
+					game.registerGameUpdate()
+				else:
+					logger.error("Player cannot be moved to the ", Room.objects.get(id=new_room))
+
+			elif player_move =="endTurn":
+				turn = Turn.objects.get(player=player, game=game)
+				turn.endTurn()
 		else:
 			#TODO: replace with logging later(don't want to replicate from grehg's but will use below commented out code)
 			#logger.error('user_id or player_move not provided')
@@ -347,6 +374,7 @@ def start_game_controller(request):
 
 		# kewl, we are done now.  Let's send our user to the game interface
 		return redirect('begingame', game_id = game.id)
+
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
@@ -436,6 +464,7 @@ def begin_game_controller(request):
 
 		# kewl, we are done now.  Let's send our user to the game interface
 		return redirect('playgame', game_id = game.id)
+
 	else:
 		logger.error('POST expected, actual ' + request.method)
 

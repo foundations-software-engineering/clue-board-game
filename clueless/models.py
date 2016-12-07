@@ -68,6 +68,9 @@ class Player(models.Model):
                 self.user.__str__(), self.currentSpace.__str__(), self.currentGame.__str__(), self.character.__str__()
             ))
 
+    def compare(self, otherPlayer):
+        return self.user == otherPlayer.user
+
     def getDetectiveSheet(self):
         """
 
@@ -210,8 +213,17 @@ class Turn(models.Model):
         """
         Ends this turn
         """
-        pass
-
+        currentPlayer = self.game.currentTurn.player
+        players = Player.objects.filter(currentGame = self.game)
+        for i, player in enumerate(players):
+            if player.compare(currentPlayer):
+                next_player = players[(i+1) % len(players)]
+                break
+        #creates a turn for next player
+        turn = Turn(player=next_player, game=self.game)
+        turn.save()
+        self.game.currentTurn = turn
+        self.game.save()
 
 class Action(models.Model):
     """
@@ -289,7 +301,10 @@ class Move(Action):
 
     def validate(self):
         #TODO: implement
-        return True
+        if (self.fromSpace.posX + 2 == self.toSpace.posX) or (self.fromSpace.posX - 2  == self.toSpace.posX) or (self.fromSpace.posY+ 2  == self.toSpace.posY) or (self.fromSpace.posY - 2  == self.toSpace.posY):
+            return True
+        else:
+            return False
 
     def performAction(self):
         # TODO: implement
@@ -408,6 +423,10 @@ class Game(models.Model):
         for c in self.unusedCharacters():
             nonUserPlayer = Player(character=c, currentSpace=c.defaultSpace, currentGame = self, nonUserPlayer = True)
             nonUserPlayer.save()
+
+        #adds current turn to game
+        player = Player.objects.get(user=user, currentGame=self)
+        self.currentTurn = Turn.objects.get(player=player, game=self)
 
         self.save()
         self.registerGameUpdate()
