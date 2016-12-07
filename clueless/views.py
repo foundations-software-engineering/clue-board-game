@@ -230,14 +230,14 @@ def playerturn(request, game_id):
 				#get space on board based on room and create Move
 				new_space = Space.objects.get(spaceCollector__id = new_room)
 				move = Move(fromSpace = player.currentSpace, toSpace = new_space)
-				
+
 				#validate the move
 				canMove = move.validate()
 				if canMove:
 					player.currentSpace = new_space
 					player.save()
 				else:
-					logger.error("Player cannot be moved to the ", new_room)
+					logger.error("Player cannot be moved to the ", Room.objects.get(id=new_room))
 
 			elif player_move =="endTurn":
 				turn = Turn.objects.get(player=player, game=game)

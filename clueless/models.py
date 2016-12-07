@@ -301,7 +301,10 @@ class Move(Action):
 
     def validate(self):
         #TODO: implement
-        return True
+        if (self.fromSpace.posX + 2 == self.toSpace.posX) or (self.fromSpace.posX - 2  == self.toSpace.posX) or (self.fromSpace.posY+ 2  == self.toSpace.posY) or (self.fromSpace.posY - 2  == self.toSpace.posY):
+            return True
+        else:
+            return False
 
     def performAction(self):
         # TODO: implement
