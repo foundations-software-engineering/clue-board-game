@@ -13,7 +13,7 @@
             {% for csi in characterSheetItems %}
                 <option value="{{ csi.card.card_id }}" aria-hidden="true">
                     {% if csi.initiallyDealt %}
-                        {{ csi.card.name }} &nbsp;&nbsp;[dealt initially]
+                        {{ csi.card.name }} &nbsp;&nbsp;[card in hand]
                     {% elif csi.checked and csi.manuallyChecked %}
                         {{ csi.card.name }} &nbsp;&nbsp;[hunch]
                     {% elif csi.checked %}
@@ -30,7 +30,7 @@
             {% for wsi in weaponSheetItems %}
                 <option value="{{ wsi.card.card_id }}" aria-hidden="true">
                     {% if wsi.initiallyDealt %}
-                        {{ wsi.card.name }} &nbsp;&nbsp;[dealt initially]
+                        {{ wsi.card.name }} &nbsp;&nbsp;[card in hand]
                     {% elif wsi.checked and wsi.manuallyChecked %}
                         {{ wsi.card.name }} &nbsp;&nbsp;[hunch]
                     {% elif wsi.checked %}

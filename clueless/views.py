@@ -258,6 +258,11 @@ def playerturn(request, game_id):
 
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
+				ds = player.getDetectiveSheet()
+				context['roomSheetItems'] = ds.getRoomSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
+				context['characterSheetItems'] = ds.getCharacterSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
+				context['weaponSheetItems'] = ds.getWeaponSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
+				context['player'] = player
 				template = loader.get_template('clueless/makeAccusation.html')
 
 			elif player_move == "makeSuggestion":
@@ -578,7 +583,7 @@ def make_suggestion_controller(request, game_id, player_id):
 	request.method = "GET"
 	return playerturn(request, game_id)
 
-def make_accusation(request):
+def make_accusation_controller(request):
 	"""
 	Creates a accusation that is composed of a character, weapon and room.
 	"""

@@ -1,8 +1,64 @@
 {% load static %}
-    <section id="intro" class="intro-section" style="margin-top:60px">
-        <div class="container-fluid">
-            <div class="row">
-                    <h2 class="form-accusation-heading">What is your Accusation?</h2>
-            </div>
-        </div>
-    </section>
+<form class="form-suggestion" action="{% url 'make_accusation_controller' game.id player.id %}" method="post" id="accusationTurnForm" >{%csrf_token%}
+    <input type="hidden" name="player_id" value="{{ player.id }}" />
+    <input type="hidden" name="room_id" value="{{ room.card_id }}" />
+    <div class="alert alert-danger" role="alert">
+    Warning: If your accusation is wrong, you lose!
+    </div>
+    <h2 class="form-accusation-heading">What is your Accusation?</h2>
+	<br>
+	  <label for="accusation_room">Select room:</label>
+		<select class="form-control" name="room_id" id="accusation_room">
+            {% for rsi in roomSheetItems %}
+                <option value="{{ rsi.card.card_id }}" aria-hidden="true">
+                    {% if rsi.initiallyDealt %}
+                        {{ rsi.card.name }} &nbsp;&nbsp;[card in hand]
+                    {% elif rsi.checked and rsi.manuallyChecked %}
+                        {{ rsi.card.name }} &nbsp;&nbsp;[hunch]
+                    {% elif rsi.checked %}
+                        {{ rsi.card.name }} &nbsp;&nbsp;[card shown]
+                    {% else %}
+                        {{ rsi.card.name }}
+                    {% endif %}
+                </option>
+            {% endfor %}
+		</select>
+    <br>
+	  <label for="accusation_suspect">Select suspect:</label>
+		<select class="form-control" name="suspect_id" id="accusation_suspect">
+            {% for csi in characterSheetItems %}
+                <option value="{{ csi.card.card_id }}" aria-hidden="true">
+                    {% if csi.initiallyDealt %}
+                        {{ csi.card.name }} &nbsp;&nbsp;[card in hand]
+                    {% elif csi.checked and csi.manuallyChecked %}
+                        {{ csi.card.name }} &nbsp;&nbsp;[hunch]
+                    {% elif csi.checked %}
+                        {{ csi.card.name }} &nbsp;&nbsp;[card shown]
+                    {% else %}
+                        {{ csi.card.name }}
+                    {% endif %}
+                </option>
+            {% endfor %}
+		</select>
+	<br>
+    <label for="accusation_weapon">Select weapon:</label>
+		<select class="form-control" name="weapon_id" id="accusation_weapon">
+            {% for wsi in weaponSheetItems %}
+                <option value="{{ wsi.card.card_id }}" aria-hidden="true">
+                    {% if wsi.initiallyDealt %}
+                        {{ wsi.card.name }} &nbsp;&nbsp;[card in hand]
+                    {% elif wsi.checked and wsi.manuallyChecked %}
+                        {{ wsi.card.name }} &nbsp;&nbsp;[hunch]
+                    {% elif wsi.checked %}
+                        {{ wsi.card.name }} &nbsp;&nbsp;[card shown]
+                    {% else %}
+                        {{ wsi.card.name }}
+                    {% endif %}
+                </option>
+            {% endfor %}
+		</select>
+	<br>
+<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
+</form>
+
+<script src="{% static 'clueless/js/makeaccusation.js' %}"></script>

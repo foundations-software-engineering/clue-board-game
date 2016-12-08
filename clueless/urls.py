@@ -36,5 +36,6 @@ urlpatterns = [
     url(r'^controllers/joingame/', views.join_game_controller, name='join_game_controller'),
     url(r'^controllers/begingame/', views.begin_game_controller, name='begin_game_controller'),
     url(r'^controllers/makesuggestion/(?P<game_id>\d+)/(?P<player_id>\d+)/', views.make_suggestion_controller, name='make_suggestion_controller'),
+    url(r'^controllers/makeaccusation/(?P<game_id>\d+)/(?P<player_id>\d+)/', views.make_accusation_controller, name='make_accusation_controller'),
     url(r'^$', views.index, name='index'),
 ]
