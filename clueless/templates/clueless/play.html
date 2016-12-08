@@ -73,7 +73,7 @@
         img.onload = loadImage;
         img.src = "{% static 'clueless/images/GridBackground.png' %}";
 
-        //Call game state
+        //Call game state in 1 second intervals
         setInterval(function(){
             getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, cached_game_seq);
             }, 1000
