@@ -223,14 +223,17 @@ class Turn(models.Model):
         Ends this turn
         """
         currentPlayer = self.game.currentTurn.player
-        players = Player.objects.filter(currentGame = self.game)
+        players = Player.objects.filter(currentGame = self.game).exclude(nonUserPlayer = True).exclude(gameResult = -1)
+        next_player = None
         for i, player in enumerate(players):
             if player.compare(currentPlayer):
                 next_player = players[(i+1) % len(players)]
                 break
+
         #creates a turn for next player
         turn = Turn(player=next_player, game=self.game)
         turn.save()
+        self.game.refresh_from_db()
         self.game.currentTurn = turn
         self.game.save()
 
@@ -493,6 +496,7 @@ class Game(models.Model):
         """
         Updates the last update time to now, and increments the current game sequence
         """
+        self.refresh_from_db()
         self.lastUpdateTime = timezone.now()
         self.currentSequence = self.currentSequence + 1
         self.save()
@@ -509,6 +513,8 @@ class Game(models.Model):
         gamestate['isHostPlayer'] = self.hostPlayer == player
         gamestate['hostplayer'] = {'player_id':self.hostPlayer.id, 'username': self.hostPlayer.user.username}
         gamestate['status'] = self.status
+        gamestate['isPlayerTurn'] = self.currentTurn.player == player
+        gamestate['gameResult'] = player.gameResult
 
         #develop a dictionary array of player status
         playerstates = []

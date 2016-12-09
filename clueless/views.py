@@ -229,7 +229,6 @@ def playgame(request, game_id):
 	return HttpResponse(template.render(context,request))
 
 @login_required
-
 def playerturn(request, game_id):
 	context = {}
 	template = loader.get_template('clueless/playerturn.html')
@@ -240,11 +239,12 @@ def playerturn(request, game_id):
 	game = Game.objects.get(id = game_id)
 	context['game'] = game
 	player = Player.objects.get(user = user_id, currentGame=game)
-
 	if player.compare(game.currentTurn.player):
 		context['isPlayerTurn'] = True
 	else:
 		context['isPlayerTurn'] = False
+
+	context['player'] = player
 	context['roomObjects'] = Room.objects.all()
 
 	if request.method == 'POST':
@@ -294,8 +294,11 @@ def playerturn(request, game_id):
 					logger.error("Player cannot be moved to the ", Room.objects.get(id=new_room))
 
 			elif player_move =="endTurn":
-				turn = Turn.objects.get(player=player, game=game)
-				turn.endTurn()
+				turn = game.currentTurn
+				if(turn.player == player):
+					turn.endTurn()
+					game.registerGameUpdate()
+
 		else:
 			#TODO: replace with logging later(don't want to replicate from grehg's but will use below commented out code)
 			#logger.error('user_id or player_move not provided')

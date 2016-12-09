@@ -88,6 +88,19 @@ function updateGameState(data){
 				stage.addChild(players[characterId].createGamePiece());
 			}
 		}
+
+		//If it is the players turn, and it wasn't the players turn previously, reload action bar
+		if(data['gamestate']['isPlayerTurn'] != cached_is_player_turn){
+		    loadActionBar();
+		}
+		cached_is_player_turn = data['gamestate']['isPlayerTurn']
+
+        //display the won game or lost game depending on whether the player won or lost
+		if(data['gamestate']['gameResult'] == 1){
+		    $('#wonGameRow').show();
+		}else if (data['gamestate']['gameResult'] == -1){
+		    $('#lostGameRow').show();
+		}
 		//Update canvas
 		stage.update();
 	}
