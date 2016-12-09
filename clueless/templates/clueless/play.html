@@ -73,10 +73,10 @@
         img.onload = loadImage;
         img.src = "{% static 'clueless/images/GridBackground.png' %}";
 
-        //Call game state
+        //Call game state in 1 second intervals
         setInterval(function(){
             getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, cached_game_seq);
-            }, 5000
+            }, 1000
         );
     }
 
@@ -94,42 +94,6 @@
 		//Scale from 1500x1500 image
         var bmp = new createjs.Bitmap(img).set({scaleX: canvasScaleX, scaleY: canvasScaleY});
         stage.addChild(bmp);
-
-        //Add local character - with movement options
-        /*
-        var scarlet = new createjs.Shape();
-        scarlet.graphics.beginFill("Red").drawCircle(0,0,15);
-        scarlet.x = 215;
-        scarlet.y = 25;
-        stage.addChild(scarlet);
-        
-        //Add other players
-        var white = new Player('White',560,25);
-        stage.addChild(white.createGamePiece());
-
-        //Add weapon
-        var revolver = new createjs.Bitmap("{% static 'clueless/images/Revolver.png' %}");
-        revolver.x = 100;
-        revolver.y = 70;
-        stage.addChild(revolver);
-
-        //Add Event Listener To Move Piece
-        scarlet.on("pressmove", function(evt){
-        	//Get the targeted piece move
-            evt.target.x = evt.stageX;
-            evt.target.y = evt.stageY;
-            //Redraw the screen to show the change
-            stage.update();
-        });
-
-        //Process drop and see if allowed
-        scarlet.on("pressup", function(evt) {    
-        	//Get desired landed space        
-            var targetSpace = getLocationFromCoordinates(evt.target.x, evt.target.y);
-            //TODO: send message to server
-            console.log('Send POST request: move player to '+targetSpace);  
-        });
-        */
 
         //Draw frame
         stage.update();
