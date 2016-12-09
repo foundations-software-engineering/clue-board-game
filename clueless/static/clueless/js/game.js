@@ -10,7 +10,7 @@ function Player (color, x, y) {
     //Declare functions
     this.createGamePiece = function() {
         //Create shape
-        this.gamePiece = new createjs.Bitmap('http://0.0.0.0:8000/static/clueless/images/'+color+'.png').set({scaleX: 0.20, scaleY: 0.20});
+        this.gamePiece = new createjs.Bitmap(base_url+color+'.png').set({scaleX: 0.20, scaleY: 0.20});
         //Set location
         this.gamePiece.x = this.positionX;
         this.gamePiece.y = this.positionY;
