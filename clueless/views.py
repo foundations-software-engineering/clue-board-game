@@ -583,7 +583,6 @@ def make_suggestion_controller(request, game_id, player_id):
 	request.method = "GET"
 	return playerturn(request, game_id)
 
-
 def make_accusation_controller(request, game_id, player_id):
 	"""
 	Creates a accusation that is composed of a character, weapon and room.
