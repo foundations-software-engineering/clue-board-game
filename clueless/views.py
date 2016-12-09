@@ -525,7 +525,7 @@ def begin_game_controller(request):
 
 def make_suggestion_controller(request, game_id, player_id):
 	"""
-	Creates a suggestion that is composed of a character, weapon and room
+	Creates a accusation that is composed of a character, weapon and room
 	"""
 	# parse request
 	# validate necessary fields are present
@@ -583,50 +583,65 @@ def make_suggestion_controller(request, game_id, player_id):
 	request.method = "GET"
 	return playerturn(request, game_id)
 
-def make_accusation_controller(request):
+def make_accusation_controller(request, game_id, player_id):
 	"""
 	Creates a accusation that is composed of a character, weapon and room.
 	"""
-	if request.method == 'POST':
-		if 'character' or 'weapon' or 'room' not in request.POST:
-			logger.error('character or weapon or room not provided')
-			# TODO Redirect to appropriate error page
-		else:
-			# Gets our expected id fields from the user's POST
-			character_name = request.POST('character_name')
-			weapon_id = request.POST('weapon_id')
-			room_id = request.POST('room_id')
+	# parse request
+	# validate necessary fields are present
+	vpp = validatePostParams(request, ["suspect_id", "room_id", "weapon_id"])
+	if vpp is not None:
+		return vpp
 
-			try:
-				character = User.objects.get(character = character_name)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.error('''character not found (Did you forget to add the
-				character in the admin panel?''')
-				# TODO Redirect to appropriate error page
+	suspect_id = request.POST.get("suspect_id")
+	room_id = request.POST.get("room_id")
+	weapon_id = request.POST.get("weapon_id")
 
-			try:
-				weapon = User.objects.get(weapon = weapon_id)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.error('''weapon not found (Did you forget to add the
-				weapon in the admin panel?''')
-				# TODO Redirect to appropriate error page
+	# get the object instances
+	try:
+		game = Game.objects.get(id=game_id)
+		player = Player.objects.get(id=player_id)
+		suspect = Character.objects.get(card_id=suspect_id)
+		room = Room.objects.get(card_id=room_id)
+		weapon = Weapon.objects.get(card_id=weapon_id)
+	except Game.DoesNotExist:
+		logger.error('invalid game_id')
+		return HttpResponse(status=422, content="invalid game_id")
+	except Player.DoesNotExist:
+		logger.error('invalid player_id')
+		return HttpResponse(status=422, content='invalid player_id')
+	except Character.DoesNotExist:
+		logger.error('invalid suspect')
+		return HttpResponse(status=422, content='invalid suspect')
+	except Room.DoesNotExist:
+		logger.error('invalid room')
+		return HttpResponse(status=422, content='invalid room')
+	except Weapon.DoesNotExist:
+		logger.error('invalid weapon')
+		return HttpResponse(status=422, content='invalid weapon')
 
-			try:
-				room = User.objects.get(room = room_id)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.error('''room not found (Did you forget to add the
-				room in the admin panel?''')
-				# TODO Redirect to appropriate error page
+	turn = game.currentTurn
 
-			whoWhatWhere = WhoWhatWhere()
-			whoWhatWhere.character = character
-			whoWhatWhere.weapon = weapon
-			whoWhatWhere.room = room
+	# user must be the same as the player, must be in the game, and sheet item must belong to player
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status=403, content="logged in user does not match player_id")
+	elif player.currentGame != game:
+		logger.error('player is not in requested game')
+		return HttpResponse(status=403, content="player is not in requested game")
+	elif turn.player != player:
+		logger.error('it is not this players turn')
+		return HttpResponse(status=403, content="it is not this players turn")
 
-			accusation = Accusation()
-			accusation.whoWhatWhere = whoWhatWhere
-	else:
-		logger.error('POST expected, actual ' + request.method)
+	acc = Accusation.createAccusation(turn, suspect, room, weapon)
+	actionStatus = turn.takeAction(acc)
+	if actionStatus is not None:
+		return (HttpResponse(status=500, content="error making accusation"))
+
+	game.registerGameUpdate()
+
+	request.method = "GET"
+	return playerturn(request, game_id)
 
 def manualsheetitemcheck(request, game_id, player_id):
 	"""

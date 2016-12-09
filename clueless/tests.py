@@ -588,6 +588,56 @@ class GameModelTests(TestCase):
         gsj = self.g.gameStateJSON(self.player2)
         self.assertEqual(len(gsj['playerstates']), 2)
 
+    def test_isAccusationCorrect_true_when_correct(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        cf = self.g.caseFile
+        accusation = Accusation.createAccusation(self.g.currentTurn, cf.character, cf.room, cf.weapon)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), True)
+
+    def test_isAccusationCorrect_false_when_incorrect_character(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        cf = self.g.caseFile
+        cToUse = Character.objects.exclude(card_id = cf.character.card_id)[2]
+
+        accusation = Accusation.createAccusation(self.g.currentTurn, cToUse, cf.room, cf.weapon)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), False)
+
+    def test_isAccusationCorrect_false_when_incorrect_room(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        cf = self.g.caseFile
+        rToUse = Room.objects.exclude(card_id = cf.room.card_id)[3]
+
+        accusation = Accusation.createAccusation(self.g.currentTurn, cf.character, rToUse, cf.weapon)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), False)
+
+    def test_isAccusationCorrect_false_when_incorrect_weapon(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        cf = self.g.caseFile
+        wToUse = Weapon.objects.exclude(card_id = cf.weapon.card_id)[1]
+
+        accusation = Accusation.createAccusation(self.g.currentTurn, cf.character, cf.room, wToUse)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), False)
+
 
 class SuggestionModelTests(TestCase):
     @classmethod
@@ -670,6 +720,91 @@ class SuggestionModelTests(TestCase):
         newSuggestion.performAction()
         movedPlayer = Player.objects.get(currentGame=self.game1, character=character)
         self.assertEqual(movedPlayer.currentSpace, self.player1.currentSpace)
+
+
+class AccusationModelTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.c1 = Card.objects.all()[0]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_createAccusation_returns_saved_suggestion(self):
+        turn = self.game1.currentTurn
+        character = Character.objects.all()[0]
+        room = Room.objects.all()[3]
+        weapon = Weapon.objects.all()[0]
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        self.assertIsNotNone(newAcc.id)
+
+    def test_takeAction_correct_player_wins(self):
+        turn = self.game1.currentTurn
+        character = self.game1.caseFile.character
+        room = self.game1.caseFile.room
+        weapon = self.game1.caseFile.weapon
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        turn.takeAction(newAcc)
+        self.assertEquals(Player.objects.get(id = turn.player.id).gameResult, 1)
+
+    def test_takeAction_incorrect_player_loses(self):
+        turn = self.game1.currentTurn
+        character = self.game1.caseFile.character
+        goodRoom = self.game1.caseFile.room
+        weapon = self.game1.caseFile.weapon
+        room = Room.objects.exclude(card_id = goodRoom.card_id)[3]
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        turn.takeAction(newAcc)
+        self.assertEquals(Player.objects.get(id = turn.player.id).gameResult, -1)
+
+    def test_takeAction_correct_game_is_over(self):
+        turn = self.game1.currentTurn
+        character = self.game1.caseFile.character
+        room = self.game1.caseFile.room
+        weapon = self.game1.caseFile.weapon
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        turn.takeAction(newAcc)
+        self.assertEquals(Game.objects.get(id = turn.game.id).status, 2)
 
 
 class TurnModelTests(TestCase):
@@ -1520,4 +1655,166 @@ class MakeSuggestionControllerTest(TestCase):
         self.c.force_login(self.user1)
         response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
                                      'weapon_id': self.weapon.card_id})
+        self.assertEqual(response.status_code, 200)
+
+
+class MakeAccusationControllerTest(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # get client
+        cls.c = Client()
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.goodCharacter = cls.game1.caseFile.character
+        cls.goodRoom = cls.game1.caseFile.room
+        cls.goodWeapon = cls.game1.caseFile.weapon
+
+        cls.wrongCharacter = Character.objects.exclude(card_id = cls.goodCharacter.card_id)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_user_must_be_logged_in(self):
+        url = reverse('make_accusation_controller',args=[self.game1.id,self.player1.id])
+        response = self.c.post(url, {'suspect_id':self.goodCharacter.card_id, 'room_id':self.goodRoom.card_id, 'weapon_id':self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_post_not_allowed(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_no_parameters_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {})
+
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_suspect_id_parameter_not_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_room_id_parameter_not_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_weapon_id_parameter_not_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_bad_game_id(self):
+        url = reverse('make_accusation_controller', args=[0, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_player_id(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, 0])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_suspect_id(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': 0, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_room_id(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': 0,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_weapon_id(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': 0})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_user_doesnt_match_player(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user2)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_player_not_in_game(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.playerNotInGame.id])
+        self.c.force_login(self.user3)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_not_players_turn(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player2.id])
+        self.c.force_login(self.user2)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_increment_game_state_when_valid(self):
+        cachedState = self.game1.currentSequence
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertNotEqual(cachedState, Game.objects.get(id = self.game1.id).currentSequence)
+
+    def test_produce_http200_when_valid(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
         self.assertEqual(response.status_code, 200)

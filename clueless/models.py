@@ -19,6 +19,15 @@ STATUS_CHOICES = (
     (COMPLETE, 'Complete'),
 )
 
+LOST = -1
+NEITHER = 0
+WON = 1
+GAME_RESULT_CHOICES = (
+    (LOST, "Lost"),
+    (NEITHER, "Neither"),
+    (WON, "Won")
+)
+
 class Board(models.Model):
     """
     Board object for the entire game.  Should be referenced by multiple games and space collections
@@ -56,7 +65,7 @@ class Player(models.Model):
     currentSpace = models.ForeignKey(Space)
     currentGame = models.ForeignKey('Game', blank=True, null=True) # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
-
+    gameResult = models.IntegerField(choices=GAME_RESULT_CHOICES, default=0)
 
     def __str__(self):
         if self.user is None:
@@ -225,6 +234,7 @@ class Turn(models.Model):
         self.game.currentTurn = turn
         self.game.save()
 
+
 class Action(models.Model):
     """
     Any player action a player can take during a turn
@@ -283,13 +293,24 @@ class Accusation(Action):
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
 
+    @classmethod
+    def createAccusation(cls, turn, suspect, room, weapon):
+        a = Accusation()
+        a.turn = turn
+        www = WhoWhatWhere(character=suspect, room=room, weapon=weapon)
+        www.save()
+        a.whoWhatWhere = www
+        a.save()
+        return (a)
+
     def validate(self):
-        #TODO: implement
         return True
 
     def performAction(self):
-        # TODO: implement
-        pass
+        if self.turn.game.isAccusationCorrect(self):
+            self.turn.game.endGame(self.turn.player)
+        else:
+            self.turn.game.loseGame(self.turn.player)
 
 
 class Move(Action):
@@ -340,7 +361,7 @@ class Game(models.Model):
     """
     caseFile = models.ForeignKey(CaseFile)
     board = models.ForeignKey(Board)
-    status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
+    status = models.IntegerField(choices = STATUS_CHOICES, default = 0)
     startTime = models.DateTimeField(default = timezone.now(), blank = True)
     lastUpdateTime = models.DateTimeField(default=timezone.now(), blank=True)
     hostPlayer = models.ForeignKey(Player)
@@ -518,12 +539,24 @@ class Game(models.Model):
 
         return gamestate
 
+    def isAccusationCorrect(self, accusation):
+        return self.caseFile.compare(accusation.whoWhatWhere)
+
     def endGame(self, winningPlayer):
         """
         Ends the game
         :param winningPlayer: Player who won
         """
-        #TODO: implement this method
+        winningPlayer.gameResult = WON
+        winningPlayer.save()
+
+        for p in Player.objects.filter(currentGame = self).exclude(id = winningPlayer.id):
+            p.gameResult = LOST
+            p.save()
+
+        self.status = 2
+        self.save()
+
         self.registerGameUpdate()
 
     def loseGame(self, losingPlayer):
@@ -531,7 +564,8 @@ class Game(models.Model):
         Ends the game for a losing player
         :param losingPlayer: Player who lost (bad accusation
         """
-        #TODO: implement this method
+        losingPlayer.gameResult = LOST
+        losingPlayer.save()
         self.registerGameUpdate()
 
     def __str__(self):
