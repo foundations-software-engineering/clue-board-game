@@ -6,7 +6,7 @@ from django.core.validators import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Action, Move, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Action, Move, Board, Card, CardReveal, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -525,6 +525,78 @@ def begin_game_controller(request):
 
 	else:
 		logger.error('POST expected, actual ' + request.method)
+
+def card_reveal_controller(request, game_id, player_id):
+	context = {}
+
+	try:
+		game = Game.objects.get(id=game_id)
+		player = Player.objects.get(id=player_id)
+	except Game.DoesNotExist:
+		logger.error('invalid game_id')
+		return HttpResponse(status=422, content="invalid game_id")
+	except Player.DoesNotExist:
+		logger.error('invalid player_id')
+		return HttpResponse(status=422, content='invalid player_id')
+
+	# user must be the same as the player, must be in the game, and sheet item must belong to player
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status=403, content="logged in user does not match player_id")
+	elif player.currentGame != game:
+		logger.error('player is not in requested game')
+		return HttpResponse(status=403, content="player is not in requested game")
+
+	try:
+		cardReveal = CardReveal.objects.get(revealingPlayer = player, status = 1)
+	except CardReveal.DoesNotExist:
+		logger.error('no card reveal for this player at this time')
+		return HttpResponse(status=422, content='no card reveal for this player at this time')
+
+	if request.method == "POST":
+		vpp = validatePostParams(request, ["suspect_id", "room_id", "weapon_id"])
+		if vpp is not None:
+			return vpp
+
+		suspect_id = request.POST.get("suspect_id")
+		room_id = request.POST.get("room_id")
+		weapon_id = request.POST.get("weapon_id")
+
+		# get the object instances
+		try:
+			suspect = Character.objects.get(card_id=suspect_id)
+			room = Room.objects.get(card_id=room_id)
+			weapon = Weapon.objects.get(card_id=weapon_id)
+		except Character.DoesNotExist:
+			logger.error('invalid suspect')
+			return HttpResponse(status=422, content='invalid suspect')
+		except Room.DoesNotExist:
+			logger.error('invalid room')
+			return HttpResponse(status=422, content='invalid room')
+		except Weapon.DoesNotExist:
+			logger.error('invalid weapon')
+			return HttpResponse(status=422, content='invalid weapon')
+
+		turn = game.currentTurn
+
+		if turn.player != player:
+			logger.error('it is not this players turn')
+			return HttpResponse(status=403, content="it is not this players turn")
+
+		sugg = Suggestion.createSuggestion(turn, suspect, room, weapon)
+		actionStatus = turn.takeAction(sugg)
+		if actionStatus is not None:
+			return (HttpResponse(status=500, content="error making suggestion"))
+
+		game.registerGameUpdate()
+	else:
+		context['cardReveal'] = cardReveal
+		#get the cards the person has that match the suggestion
+		context['cards'] = cardReveal.potentialCards()
+		template = loader.get_template('clueless/cardReveal.html')
+		return HttpResponse(template.render(context, request))
+
+
 
 def make_suggestion_controller(request, game_id, player_id):
 	"""
