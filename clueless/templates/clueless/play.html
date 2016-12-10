@@ -91,8 +91,12 @@
         img.onload = loadImage;
         img.src = "{% static 'clueless/images/GridBackground.png' %}";
 
-        //Call game state once, before sending it on a timer
-        getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, cached_game_seq);
+        //Call game state twice, before sending it on a timer
+        //Have to call twice because the first call to gamestate doesn't correctly render the game pieces
+        getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, -1);
+        setTimeout(function(){
+            getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, -1);
+        }, 1000);
         //Call game state in 1 second intervals
         setInterval(function(){
             getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, cached_game_seq);
