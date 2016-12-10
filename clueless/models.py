@@ -88,7 +88,7 @@ class Player(models.Model):
         return DetectiveSheet.objects.get(game = self.currentGame, player = self)
 
     def getNextPlayer(self, removeLosingPlayers = True):
-        players = Player.objects.filter(currentGame=self.currentGame).exclude(nonUserPlayer=True)
+        players = Player.objects.filter(currentGame=self.currentGame).exclude(nonUserPlayer=True).order_by("id")
         if removeLosingPlayers:
             players = players.exclude(gameResult=-1)
         next_player = None

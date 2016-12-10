@@ -19,6 +19,7 @@ function showRooms(moveType){
 }
 
 $('#playerTurnForm').submit(function(event) {
+    $('#playerTurnForm').css('visibility','hidden');
     $.post(
         $('#playerTurnForm').attr('action'),
         $('#playerTurnForm').serialize()

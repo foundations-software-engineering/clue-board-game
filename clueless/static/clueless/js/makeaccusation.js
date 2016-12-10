@@ -1,5 +1,6 @@
 //Post to server
-    $('#accusationTurnForm').submit(function(event) {
+$('#accusationTurnForm').submit(function(event) {
+    $('#accusationTurnForm').css('visibility','hidden');
     $.post(
         $('#accusationTurnForm').attr('action'),
         $('#accusationTurnForm').serialize()

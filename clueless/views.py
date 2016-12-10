@@ -228,8 +228,44 @@ def playgame(request, game_id):
 
 	spaces = Space.objects.all().order_by('posY', 'posX')
 	context = {"game":game, "player":player, "spaces":spaces}
+	context['currentTurn'] = game.currentTurn
+	context['allPlayers'] = Player.objects.filter(currentGame = game)
 	template = loader.get_template('clueless/play.html')
 	return HttpResponse(template.render(context,request))
+
+@login_required
+def playerlist(request, game_id, player_id):
+	"""
+	:param request:
+	:param game_id: game_id of a game at status Started
+	:param player_id: player_id of logged in player
+	:return:
+	"""
+	try:
+		game = Game.objects.get(id = game_id)
+		player = Player.objects.get(id = player_id, currentGame = game)
+	except Game.DoesNotExist:
+		logger.error("Requested game_id doesn't exist")
+		return HttpResponse(status=422, content="Requested game doesn't exist")
+	except Player.DoesNotExist:
+		logger.error("Requested player_id doesn't exist or is not part of this game")
+		return HttpResponse(status=422, content="Requested player_id doesn't exist or is not part of this game")
+
+	#check for permissions
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status = 403, content="logged in user does not match player_id")
+
+	#get all of the sheet items for the player
+	ds = player.getDetectiveSheet()
+
+	template = loader.get_template('clueless/playerList.html')
+	context = {}
+	context['game'] = game
+	context['player'] = player
+	context['currentTurn'] = game.currentTurn
+	context['allPlayers'] = Player.objects.filter(currentGame=game).order_by("id")
+	return HttpResponse(template.render(context, request))
 
 @login_required
 def playerturn(request, game_id):

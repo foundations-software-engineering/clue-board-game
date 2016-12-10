@@ -58,6 +58,7 @@ function updateGameState(data){
 
 	//Check if the game status has changed
 	if(data['changed'] == true){
+        loadPlayerList();
         loadDetectiveSheet();
 		//Update game sequence
 		cached_game_seq = data['gamestate']['game_sequence'];

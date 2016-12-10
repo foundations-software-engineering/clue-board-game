@@ -29,6 +29,7 @@ urlpatterns = [
     url(r'^joingame/(?P<game_id>\d+)/', views.joingame, name='joingame'),
     url(r'^begingame/(?P<game_id>\d+)/', views.begingame, name='begingame'),
     url(r'^playerturn/(?P<game_id>\d+)/', views.playerturn, name='playerturn'),
+    url(r'^playerlist/(?P<game_id>\d+)/(?P<player_id>\d+)/', views.playerlist, name='playerlist'),
     url(r'^detectivesheet/(?P<game_id>\d+)/(?P<player_id>\d+)/', views.detectivesheet, name='detectivesheet'),
     url(r'^controllers/manualSheetItemCheck/(?P<game_id>\d+)/(?P<player_id>\d+)/', views.manualsheetitemcheck, name='manualsheetitemcheck'),
     url(r'^rest/gamestate/', views.gamestate, name='gamestate'),

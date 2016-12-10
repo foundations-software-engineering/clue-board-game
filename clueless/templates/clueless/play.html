@@ -41,7 +41,45 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-9">
+            <div class="col-md-3">
+                <div id="playerList">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Character</th>
+                                <th>Username</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ap in allPlayers %}
+                            <tr
+                                    {% if ap.nonUserPlayer %}
+                                    class = "active"
+                                    {% elif ap.gameResult == 1 %}
+                                    class = "success"
+                                    {% elif ap.gameResult == -1 %}
+                                    class = "danger"
+                                    {% elif ap == currentTurn.player %}
+                                    class = "info"
+                                    {% endif%}
+
+                            >
+                                <td><img height="25px" src="{% static 'clueless/images/' %}{{ap.character.characterColor}}.png"/></td>
+                                {% if ap == player %}
+                                <td><b>{{ap.character.name}}</b></td>
+                                <td><b>{{ap.user.username}}</b></td>
+                                {% else %}
+                                <td>{{ap.character.name}}</td>
+                                <td>{{ap.user.username}}</td>
+                                {% endif%}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
                 <canvas id="clueless" width="100%"></canvas>
             </div>
             <div class="col-md-3">
@@ -135,6 +173,15 @@
         });
     }
 
+    function loadPlayerList(){
+        //Define the playerList URL
+        var url = "{% url 'playerlist' game.id player.id %}";
+        //Retrieve the HTML and load it
+        $.get( url , function( data ) {
+            $("#playerList" ).html( data );
+        });
+    }
+
     function loadDetectiveSheet(){
         notes = $('#detectiveSheetNotes').val();
         loadDetectiveSheet(notes);
@@ -156,6 +203,7 @@
         //Load the content bar -- can be reloaded as needed
         loadActionBar();
         loadDetectiveSheet();
+        loadPlayerList();
         //Update canvas size
         var ctx = document.getElementById('clueless').getContext('2d');
         //Set both to width, to keep it square

@@ -6,23 +6,6 @@
     Warning: If your accusation is wrong, you lose!
     </div>
     <h2 class="form-accusation-heading">What is your Accusation?</h2>
-	<br>
-	  <label for="accusation_room">Select room:</label>
-		<select class="form-control" name="room_id" id="accusation_room">
-            {% for rsi in roomSheetItems %}
-                <option value="{{ rsi.card.card_id }}" aria-hidden="true">
-                    {% if rsi.initiallyDealt %}
-                        {{ rsi.card.name }} &nbsp;&nbsp;[card in hand]
-                    {% elif rsi.checked and rsi.manuallyChecked %}
-                        {{ rsi.card.name }} &nbsp;&nbsp;[hunch]
-                    {% elif rsi.checked %}
-                        {{ rsi.card.name }} &nbsp;&nbsp;[card shown]
-                    {% else %}
-                        {{ rsi.card.name }}
-                    {% endif %}
-                </option>
-            {% endfor %}
-		</select>
     <br>
 	  <label for="accusation_suspect">Select suspect:</label>
 		<select class="form-control" name="suspect_id" id="accusation_suspect">
@@ -36,6 +19,23 @@
                         {{ csi.card.name }} &nbsp;&nbsp;[card shown]
                     {% else %}
                         {{ csi.card.name }}
+                    {% endif %}
+                </option>
+            {% endfor %}
+		</select>
+    <br>
+	  <label for="accusation_room">Select room:</label>
+		<select class="form-control" name="room_id" id="accusation_room">
+            {% for rsi in roomSheetItems %}
+                <option value="{{ rsi.card.card_id }}" aria-hidden="true">
+                    {% if rsi.initiallyDealt %}
+                        {{ rsi.card.name }} &nbsp;&nbsp;[card in hand]
+                    {% elif rsi.checked and rsi.manuallyChecked %}
+                        {{ rsi.card.name }} &nbsp;&nbsp;[hunch]
+                    {% elif rsi.checked %}
+                        {{ rsi.card.name }} &nbsp;&nbsp;[card shown]
+                    {% else %}
+                        {{ rsi.card.name }}
                     {% endif %}
                 </option>
             {% endfor %}
