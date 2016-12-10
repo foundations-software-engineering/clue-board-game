@@ -4,7 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 import json
 
-from clueless.models import Accusation, Card, CaseFile, Character, DetectiveSheet, Game, Move, Player, Room, SheetItem, Space, Suggestion, Weapon, WhoWhatWhere
+from clueless.models import Accusation, Card, CardReveal, CaseFile, Character, DetectiveSheet, Game, Move, Player, Room, SheetItem, Space, Suggestion, Weapon, WhoWhatWhere
 
 
 class AAA_DBSetup(TestCase):
@@ -78,6 +78,113 @@ class CardModelTests(TestCase):
         self.assertEqual(weapon3.compare(weapon1), True)
         self.assertEqual(weapon2.compare(weapon3), False)
         self.assertEqual(weapon2.compare(character1), False)
+
+
+class CardRevealModelTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.player3 = Player(user=cls.user3, character=character3, currentSpace=character3.defaultSpace)
+        cls.player3.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.addPlayer(cls.player3)
+        cls.game1.startGame(cls.user1)
+
+        cls.game1.refresh_from_db()
+        cls.player2.refresh_from_db()
+
+        turn = cls.game1.currentTurn
+        cls.characterCard = cls.player2.getDetectiveSheet().getCharacterSheetItems().filter(initiallyDealt = True)[0].card
+        cls.character = Character.objects.get(card_id = cls.characterCard.card_id)
+        room = Room.objects.get(id=cls.player1.currentSpace.spaceCollector.id)
+        weapon = Weapon.objects.all()[0]
+
+        cls.p1Suggestion = Suggestion.createSuggestion(turn, cls.character, room, weapon)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.player3.delete()
+        cls.game1.delete()
+
+    def test_createCardReveal_returns_saved_CardReveal(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        self.assertIsNotNone(cr.id)
+
+    def test_createCardReveal_has_right_player(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        self.assertEquals(cr.revealingPlayer, self.player2)
+
+    def test_hasNext_returns_true_when_has_next(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        self.assertEquals(cr.hasNext(), True)
+
+    def test_hasNext_returns_false_when_not_has_next(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        self.assertEquals(cr1.hasNext(), False)
+
+    def test_createNext_returns_saved_Card_Reveal(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        self.assertIsNotNone(cr1.id)
+
+    def test_createNext_has_right_player(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        self.assertEquals(cr1.revealingPlayer, self.player3)
+
+    def test_createNext_raises_Runtime_when_no_next(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        with self.assertRaises(RuntimeError):
+            cr2 = cr1.createNext()
+
+    def test_reveal_makes_note_on_suggesting_player_detective_sheet(self):
+        sds = self.p1Suggestion.turn.player.getDetectiveSheet()
+        siInQuestion = SheetItem.objects.get(detectiveSheet=sds, card__card_id=self.character.card_id)
+
+        self.assertEquals(siInQuestion.checked, False)
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr.reveal(self.character)
+        siInQuestion.refresh_from_db()
+
+        self.assertEquals(siInQuestion.checked, True)
+        self.assertEquals(siInQuestion.initiallyDealt, False)
+        self.assertEquals(siInQuestion.manuallyChecked, False)
+
+    def test_endReveal_changes_status(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr.endReveal()
+        cr.refresh_from_db()
+        self.assertEquals(cr.status, 2)
 
 
 class CaseFileModelTests(TestCase):
@@ -536,6 +643,10 @@ class GameModelTests(TestCase):
     def test_gameStateJSON_isHostPlayer_true_when_hostplayer(self):
         self.g.initializeGame(self.player1)
         self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.g.save()
 
 
         gsj = self.g.gameStateJSON(self.player1)
@@ -544,12 +655,20 @@ class GameModelTests(TestCase):
     def test_gameStateJSON_isHostPlayer_false_when_not_hostplayer(self):
         self.g.initializeGame(self.player1)
         self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.g.save()
 
         gsj = self.g.gameStateJSON(self.player2)
         self.assertEqual(gsj['isHostPlayer'], False)
 
     def test_gameStateJSON_hostplayer_matches_hostplayer(self):
         self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
         self.g.save()
 
         gsj = self.g.gameStateJSON(self.player2)
@@ -559,6 +678,10 @@ class GameModelTests(TestCase):
 
     def test_gameStateJSON_status_matches_game_status(self):
         self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
         self.g.save()
 
         self.g.status = 0
@@ -579,14 +702,13 @@ class GameModelTests(TestCase):
     def test_gameStateJSON_playerstates_count_matches(self):
         self.g.initializeGame(self.player1)
         self.g.save()
-
         self.g.addPlayer(self.player1)
-        gsj = self.g.gameStateJSON(self.player2)
-        self.assertEqual(len(gsj['playerstates']), 1)
-
         self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.g.save()
+
         gsj = self.g.gameStateJSON(self.player2)
-        self.assertEqual(len(gsj['playerstates']), 2)
+        self.assertEqual(len(gsj['playerstates']), 6)
 
     def test_isAccusationCorrect_true_when_correct(self):
         self.g.initializeGame(self.player1)
@@ -605,6 +727,7 @@ class GameModelTests(TestCase):
         self.g.addPlayer(self.player1)
         self.g.addPlayer(self.player2)
         self.g.startGame(self.user1)
+        self.g.save()
 
         cf = self.g.caseFile
         cToUse = Character.objects.exclude(card_id = cf.character.card_id)[2]
@@ -1148,6 +1271,8 @@ class GameStateViewTest(TestCase):
         cls.game1.save()
         cls.game1.addPlayer(cls.player1)
         cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+        cls.game1.save()
 
         cls.gsUrl = reverse('gamestate')
 

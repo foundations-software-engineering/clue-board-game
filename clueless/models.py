@@ -87,6 +87,17 @@ class Player(models.Model):
         """
         return DetectiveSheet.objects.get(game = self.currentGame, player = self)
 
+    def getNextPlayer(self, removeLosingPlayers = True):
+        players = Player.objects.filter(currentGame=self.currentGame).exclude(nonUserPlayer=True)
+        if removeLosingPlayers:
+            players = players.exclude(gameResult=-1)
+        next_player = None
+        for i, player in enumerate(players):
+            if player.compare(self):
+                next_player = players[(i + 1) % len(players)]
+                break
+        return next_player
+
 
 class Hallway(SpaceCollection):
     """
@@ -222,13 +233,13 @@ class Turn(models.Model):
         """
         Ends this turn
         """
-        currentPlayer = self.game.currentTurn.player
-        players = Player.objects.filter(currentGame = self.game).exclude(nonUserPlayer = True).exclude(gameResult = -1)
+        next_player = self.game.currentTurn.player.getNextPlayer()
+        """players = Player.objects.filter(currentGame = self.game).exclude(nonUserPlayer = True).exclude(gameResult = -1)
         next_player = None
         for i, player in enumerate(players):
             if player.compare(currentPlayer):
                 next_player = players[(i+1) % len(players)]
-                break
+                break"""
 
         #creates a turn for next player
         turn = Turn(player=next_player, game=self.game)
@@ -384,6 +395,7 @@ class Game(models.Model):
         randCaseFile = CaseFile.createRandom()
         randCaseFile.save()
         self.caseFile = randCaseFile
+        self.save()
         self.registerGameUpdate()
 
     def unusedCharacters(self):
@@ -667,3 +679,66 @@ class SheetItem(models.Model):
         return ("user: {}, game: [{}], card: {}, checked: {}".format(
             self.detectiveSheet.player.user.__str__(), self.detectiveSheet.game.__str__(), self.card.__str__(), self.checked.__str__()
         ))
+
+
+class CardReveal(models.Model):
+    """
+    This class helps prompts other users to reveal cards during a suggestion
+    """
+    suggestion = models.ForeignKey(Suggestion)
+    revealingPlayer = models.ForeignKey(Player)
+    revealedCard = models.ForeignKey(Card, blank = True, null = True)
+    status = models.IntegerField(choices = STATUS_CHOICES, default = 0)
+
+    @classmethod
+    def createCardReveal(self, suggestion):
+        """
+        Given a suggestion, starts a card reveal process
+        :param suggestion:
+        :return:
+        """
+        nextPlayer = suggestion.turn.player.getNextPlayer(False)
+        cr = CardReveal(suggestion = suggestion, revealingPlayer = nextPlayer, status = 1)
+        cr.save()
+        return cr
+
+    def hasNext(self):
+        """
+        :return: True if other players need to reveal, false otherwise
+        """
+        nextPlayer = self.revealingPlayer.getNextPlayer(False)
+        return nextPlayer != self.suggestion.turn.player
+
+    def createNext(self):
+        """
+        Please check that there is a next player before calling!
+        :return: A new CardReveal object with the next player
+        """
+        nextPlayer = self.revealingPlayer.getNextPlayer(False)
+        if nextPlayer == self.suggestion.turn.player:
+            raise RuntimeError("card reveal has gone full circle")
+
+        cr = CardReveal(suggestion = self.suggestion, revealingPlayer = nextPlayer, status = 1)
+        cr.save()
+        return cr
+
+    def reveal(self, card):
+        """
+        Reveals a card to the suggesting player
+        :param card: Card to reveal
+        :return:
+        """
+        self.revealedCard = card
+        self.save()
+        #make note on suggestion player's detective sheet
+        ds = self.suggestion.turn.player.getDetectiveSheet()
+        ds.makeNote(card, True)
+        self.endReveal()
+
+    def endReveal(self):
+        """
+        Ends the reveal
+        :return:
+        """
+        self.status = 2
+        self.save()
