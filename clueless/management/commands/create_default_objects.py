@@ -72,7 +72,7 @@ class Command(BaseCommand):
 
         #now, lets create the gameboard spaces
         #Create passageways
-        s01_01 = Space(posX=1, posY=1, spaceNorth= s05_05, spaceCollector=studyRoom)
+        s01_01 = Space(posX=1, posY=1, spaceCollector=studyRoom)
         s01_01.save()
         s02_01 = Space(posX=2, posY=1, spaceWest=s01_01, spaceCollector=hallway01)
         s02_01.save()
@@ -80,7 +80,7 @@ class Command(BaseCommand):
         s03_01.save()
         s04_01 = Space(posX=4, posY=1, spaceWest=s03_01, spaceCollector=hallway02)
         s04_01.save()
-        s05_01 = Space(posX=5, posY=1, spaceWest=s04_01, spaceNorth=s01_05, spaceCollector=loungeRoom)
+        s05_01 = Space(posX=5, posY=1, spaceWest=s04_01, spaceCollector=loungeRoom)
         s05_01.save()
 
         s01_02 = Space(posX=1, posY=2, spaceNorth=s01_01, spaceCollector=hallway03)
@@ -122,6 +122,12 @@ class Command(BaseCommand):
         s04_05.save()
         s05_05 = Space(posX=5, posY=5, spaceNorth=s05_04, spaceWest=s04_05, spaceCollector=kitchenRoom)
         s05_05.save()
+
+        #set up secret passage ways as spaces
+        s01_01.spaceNorth = s05_05
+        s01_01.save()
+        s05_01.spaceNorth = s01_05
+        s05_01.save()
 
         #these passages will exist and relate in kind of weird ways
         psgStudy2Kitchen = SecretPassage(board = defBoard)
