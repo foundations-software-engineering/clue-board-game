@@ -32,6 +32,11 @@
 					{{room.name}}
 				</option>
 			{% endfor %}
+			{% for hallway in hallwayObjects %}
+				<option value="{{hallway.id}}" aria-hidden="true">
+					{{hallway.name}}
+				</option>
+			{% endfor %}
 			</select>
 		<br>
 

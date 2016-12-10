@@ -106,6 +106,7 @@ class Player(models.Model):
 
 
 class Hallway(SpaceCollection):
+    name = models.CharField(max_length = 50, blank=True)
     """
     Hallway in the game
     """
@@ -374,11 +375,25 @@ class Move(Action):
     toSpace = models.ForeignKey(Space, related_name='toSpace')
 
     def validate(self):
-        #TODO: implement
-        if (self.fromSpace.posX + 2 == self.toSpace.posX) or (self.fromSpace.posX - 2  == self.toSpace.posX) or (self.fromSpace.posY+ 2  == self.toSpace.posY) or (self.fromSpace.posY - 2  == self.toSpace.posY):
+        print("fromSpace is ", self.fromSpace)
+        print("north is ", self.fromSpace.spaceNorth)
+        # print("east is ", self.fromSpace.spaceEast)
+        print("south is ", self.fromSpace.spaceSouth)
+        print("west is ", self.fromSpace.spaceWest)
+        print("toSpace is ", self.toSpace)
+        if self.toSpace == self.fromSpace.spaceWest:
+            return True
+        elif self.toSpace == self.fromSpace.spaceNorth:
+            return True
+        elif self.toSpace == self.fromSpace.spaceSouth:
             return True
         else:
             return False
+
+        # if (self.fromSpace.posX + 2 == self.toSpace.posX) or (self.fromSpace.posX - 2  == self.toSpace.posX) or (self.fromSpace.posY+ 2  == self.toSpace.posY) or (self.fromSpace.posY - 2  == self.toSpace.posY):
+        #     return True
+        # else:
+        #     return False
 
     def performAction(self):
         # TODO: implement
