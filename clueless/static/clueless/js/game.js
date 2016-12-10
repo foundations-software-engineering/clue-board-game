@@ -1,28 +1,27 @@
 function Player (color, x, y) {
 	//Declare instance variables
-	this.color = color;
-	this.positionX = x;
-	this.positionY = y;
-	
-	//Initialize other class variables
-	this.gamePiece = null;
-	
-	//Declare functions
-	this.createGamePiece = function() {
-		//Create shape
-		this.gamePiece = new createjs.Shape();
-		//Set location
-		this.gamePiece.graphics.beginFill(this.color).drawCircle(0,0,15);
-		this.gamePiece.x = this.positionX;
-		this.gamePiece.y = this.positionY;
+    this.color = color;
+    this.positionX = x;
+    this.positionY = y;
+    
+    //Initialize other class variables
+    this.gamePiece = null;
+    
+    //Declare functions
+    this.createGamePiece = function() {
+        //Create shape
+        this.gamePiece = new createjs.Bitmap(base_url+color+'.png').set({scaleX: 0.20, scaleY: 0.20});
+        //Set location
+        this.gamePiece.x = this.positionX;
+        this.gamePiece.y = this.positionY;
 
-		//Return game piece to be displayed
-		return this.gamePiece;
-	}
+        //Return game piece to be displayed
+        return this.gamePiece;
+    }
 
-	this.getGamePiece = function() {
-		return this.gamePiece;
-	}
+    this.getGamePiece = function() {
+        return this.gamePiece;
+    }
 }
 
 function getLocationFromCoordinates(x, y){
