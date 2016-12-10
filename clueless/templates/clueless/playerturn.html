@@ -25,7 +25,7 @@
 	<!--hard coded for now, but TODO: exclude the current space-->
 	<br>
 	<div id="new_position_div">
-		  <label for="new_position" id=new_position_label>Move to the:</label>
+		<label for="new_position" id=new_position_label>Move to the:</label>
 			<select class="form-control" name="new_position" id="new_position">
 			{% for room in roomObjects %}
 				<option value="{{room.id}}" aria-hidden="true">

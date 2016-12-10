@@ -80,7 +80,7 @@ class Command(BaseCommand):
         s03_01.save()
         s04_01 = Space(posX=4, posY=1, spaceWest=s03_01, spaceCollector=hallway02)
         s04_01.save()
-        s05_01 = Space(posX=5, posY=1, spaceWest=s04_01, spaceCollector=loungeRoom)
+        s05_01 = Space(posX=5, posY=1, spaceWest=s04_01,  spaceCollector=loungeRoom)
         s05_01.save()
 
         s01_02 = Space(posX=1, posY=2, spaceNorth=s01_01, spaceCollector=hallway03)

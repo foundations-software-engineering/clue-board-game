@@ -378,15 +378,11 @@ class Move(Action):
 
         if self.toSpace == self.fromSpace.spaceNorth:
             return True
-        elif self.toSpace == self.fromSpace.spaceEast:
-            return True
         elif self.toSpace == self.fromSpace.spaceSouth:
             return True
         elif self.toSpace == self.fromSpace.spaceWest:
             return True
         elif self.toSpace.spaceNorth == self.fromSpace:
-            return True
-        elif self.toSpace.spaceEast == self.fromSpace:
             return True
         elif self.toSpace.spaceSouth == self.fromSpace:
             return True
