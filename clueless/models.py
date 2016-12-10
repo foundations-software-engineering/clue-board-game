@@ -375,12 +375,6 @@ class Move(Action):
     toSpace = models.ForeignKey(Space, related_name='toSpace')
 
     def validate(self):
-        # print("fromSpace is ", self.fromSpace)
-        # print("north is ", self.fromSpace.spaceNorth)
-        # print("east is ", self.fromSpace.spaceEast)
-        # print("south is ", self.fromSpace.spaceSouth)
-        # print("west is ", self.fromSpace.spaceWest)
-        # print("toSpace is ", self.toSpace)
 
         if self.toSpace == self.fromSpace.spaceNorth:
             return True
@@ -389,6 +383,14 @@ class Move(Action):
         elif self.toSpace == self.fromSpace.spaceSouth:
             return True
         elif self.toSpace == self.fromSpace.spaceWest:
+            return True
+        elif self.toSpace.spaceNorth == self.fromSpace:
+            return True
+        elif self.toSpace.spaceEast == self.fromSpace:
+            return True
+        elif self.toSpace.spaceSouth == self.fromSpace:
+            return True
+        elif self.toSpace.spaceWest == self.fromSpace:
             return True
         else:
             return False

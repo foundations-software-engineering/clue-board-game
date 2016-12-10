@@ -112,7 +112,7 @@ class Command(BaseCommand):
         s05_04 = Space(posX=5, posY=4, spaceNorth=s05_03, spaceCollector=hallway10)
         s05_04.save()
 
-        s01_05 = Space(posX=1, posY=5, spaceNorth=s01_04, spaceCollector=conservatoryRoom)
+        s01_05 = Space(posX=1, posY=5, spaceNorth=s01_04, spaceSouth = s05_01, spaceCollector=conservatoryRoom)
         s01_05.save()
         s02_05 = Space(posX=2, posY=5, spaceWest=s01_05, spaceCollector=hallway11)
         s02_05.save()
@@ -120,7 +120,7 @@ class Command(BaseCommand):
         s03_05.save()
         s04_05 = Space(posX=4, posY=5, spaceWest=s03_05, spaceCollector=hallway12)
         s04_05.save()
-        s05_05 = Space(posX=5, posY=5, spaceNorth=s05_04, spaceWest=s04_05, spaceCollector=kitchenRoom)
+        s05_05 = Space(posX=5, posY=5, spaceNorth=s05_04, spaceWest=s04_05, spaceSouth = s01_01, spaceCollector=kitchenRoom)
         s05_05.save()
 
         #set up secret passage ways as spaces
