@@ -306,7 +306,11 @@ class Suggestion(Action):
         accusedPlayer.currentSpace = accusedSpace
         accusedPlayer.save()
         cr = CardReveal.createCardReveal(self)
-        cr.save()
+        while cr.potentialCards().count() == 0:
+            cr.endReveal()
+            if not cr.hasNext():
+                break
+            cr = cr.createNext()
 
     def actionDescription(self):
         return ("<b>{}</b> suggested it was <b>{}</b> in the <b>{}</b> with the <b>{}</b>".format(

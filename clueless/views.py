@@ -575,9 +575,15 @@ def card_reveal_controller(request, game_id, player_id):
 			return HttpResponse(status=422, content='invalid card')
 
 		cardReveal.reveal(card)
-		game.registerGameUpdate()
 		if cardReveal.hasNext():
-			cardReveal.createNext()
+			cr = cardReveal.createNext()
+			while cr.potentialCards().count() == 0:
+				cr.endReveal()
+				if not cr.hasNext():
+					break
+				cr = cr.createNext()
+
+		game.registerGameUpdate()
 
 
 	context['game'] = game
