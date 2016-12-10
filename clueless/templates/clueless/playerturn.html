@@ -1,6 +1,10 @@
 {% load static %}
+{% if hasActiveSuggestion %}
+<div class="alert alert-info" role="alert">
+	<h2>You have an open suggestion, please wait.</h2>
+</div>
 
-{% if isPlayerTurn and player.gameResult == 0 %}
+{% elif isPlayerTurn and player.gameResult == 0 %}
 <form class="form-playerturn" action="{% url 'playerturn' game.id %}" method="post" id="playerTurnForm" >{%csrf_token%}
 	<h2 class="form-playerturn-heading">It is your turn! what is your move?</h2>
 	 <br>
@@ -26,13 +30,9 @@
 <button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
 </form>
 {% else %}
-	<section id="intro" class="intro-section" style="margin-top:60px">
-        <div class="container">
-            <div class="row">
-                    <h2 class="form-waitTurn-heading">It is not your turn. Please wait for your turn.</h2>
-            </div>
-        </div>
-    </section>
+<div class="alert alert-info" role="alert">
+	<h2>It is not your turn, please wait.</h2>
+</div>
 
 {% endif %}
 <!-- App Specific JS -->

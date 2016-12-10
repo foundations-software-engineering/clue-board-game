@@ -194,6 +194,9 @@ def begingame(request, game_id):
 	except Game.DoesNotExist:
 		return redirect('index')
 
+	if game.status > 0:
+		return redirect('playgame', game.id)
+
 	#get a list of players currently in the game
 	players = Player.objects.filter(currentGame__id = game_id)
 	numOfPlayers = players.count()
@@ -241,8 +244,12 @@ def playerturn(request, game_id):
 	player = Player.objects.get(user = user_id, currentGame=game)
 	if player.compare(game.currentTurn.player):
 		context['isPlayerTurn'] = True
+		context['hasActiveSuggestion'] = CardReveal.objects.filter(status=1,
+																   suggestion__turn__player=player).count() > 0
+
 	else:
 		context['isPlayerTurn'] = False
+		context['hasActiveSuggestion'] = False
 
 	context['player'] = player
 	context['roomObjects'] = Room.objects.all()
@@ -554,49 +561,32 @@ def card_reveal_controller(request, game_id, player_id):
 		return HttpResponse(status=422, content='no card reveal for this player at this time')
 
 	if request.method == "POST":
-		vpp = validatePostParams(request, ["suspect_id", "room_id", "weapon_id"])
+		vpp = validatePostParams(request, ["card_id"])
 		if vpp is not None:
 			return vpp
 
-		suspect_id = request.POST.get("suspect_id")
-		room_id = request.POST.get("room_id")
-		weapon_id = request.POST.get("weapon_id")
+		card_id = request.POST.get("card_id")
 
 		# get the object instances
 		try:
-			suspect = Character.objects.get(card_id=suspect_id)
-			room = Room.objects.get(card_id=room_id)
-			weapon = Weapon.objects.get(card_id=weapon_id)
-		except Character.DoesNotExist:
-			logger.error('invalid suspect')
-			return HttpResponse(status=422, content='invalid suspect')
-		except Room.DoesNotExist:
-			logger.error('invalid room')
-			return HttpResponse(status=422, content='invalid room')
-		except Weapon.DoesNotExist:
-			logger.error('invalid weapon')
-			return HttpResponse(status=422, content='invalid weapon')
+			card = Card.objects.get(card_id=card_id)
+		except Card.DoesNotExist:
+			logger.error('invalid card')
+			return HttpResponse(status=422, content='invalid card')
 
-		turn = game.currentTurn
-
-		if turn.player != player:
-			logger.error('it is not this players turn')
-			return HttpResponse(status=403, content="it is not this players turn")
-
-		sugg = Suggestion.createSuggestion(turn, suspect, room, weapon)
-		actionStatus = turn.takeAction(sugg)
-		if actionStatus is not None:
-			return (HttpResponse(status=500, content="error making suggestion"))
-
+		cardReveal.reveal(card)
 		game.registerGameUpdate()
-	else:
-		context['cardReveal'] = cardReveal
-		#get the cards the person has that match the suggestion
-		context['cards'] = cardReveal.potentialCards()
-		template = loader.get_template('clueless/cardReveal.html')
-		return HttpResponse(template.render(context, request))
+		if cardReveal.hasNext():
+			cardReveal.createNext()
 
 
+	context['game'] = game
+	context['player'] = player
+	context['cardReveal'] = cardReveal
+	#get the cards the person has that match the suggestion
+	context['cards'] = cardReveal.potentialCards().order_by("name")
+	template = loader.get_template('clueless/cardReveal.html')
+	return HttpResponse(template.render(context, request))
 
 def make_suggestion_controller(request, game_id, player_id):
 	"""

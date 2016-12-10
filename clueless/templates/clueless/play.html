@@ -72,6 +72,7 @@
     var cached_game_seq = -1;
     var cached_is_player_turn = false;
     var cached_is_card_reveal = false;
+    var cached_is_waiting_for_card_reveal = false;
     var stage;
     var canvas;
     var players = [];
@@ -131,7 +132,8 @@
     }
 
     function loadDetectiveSheet(){
-        loadDetectiveSheet("");
+        notes = $('#detectiveSheetNotes').val();
+        loadDetectiveSheet(notes);
     }
 
     function loadDetectiveSheet(notes)

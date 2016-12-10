@@ -268,6 +268,12 @@ class Action(models.Model):
         """
         raise NotImplementedError("Subclasses of Action need to implement abstract method performAction")
 
+    def actionDescription(self):
+        """
+                Performs the action
+                """
+        raise NotImplementedError("Subclasses of Action need to implement abstract method actionDescription")
+
 
 class Suggestion(Action):
     """
@@ -299,6 +305,14 @@ class Suggestion(Action):
         #move player
         accusedPlayer.currentSpace = accusedSpace
         accusedPlayer.save()
+        cr = CardReveal.createCardReveal(self)
+        cr.save()
+
+    def actionDescription(self):
+        return ("<b>{}</b> suggested it was <b>{}</b> in the <b>{}</b> with the <b>{}</b>".format(
+            self.turn.player.user.username, self.whoWhatWhere.character.name, self.whoWhatWhere.room.name,
+            self.whoWhatWhere.weapon.name
+        ))
 
 
 class Accusation(Action):
@@ -527,6 +541,8 @@ class Game(models.Model):
         gamestate['status'] = self.status
         gamestate['isPlayerTurn'] = self.currentTurn.player == player
         gamestate['isCardReveal'] = CardReveal.objects.filter(revealingPlayer = player, status = 1).count() > 0
+        gamestate['isWaitingForCardReveal'] = CardReveal.objects.filter(status=1,
+																   suggestion__turn__player=player).count() > 0
         gamestate['gameResult'] = player.gameResult
 
         #develop a dictionary array of player status
@@ -749,6 +765,6 @@ class CardReveal(models.Model):
         suggWWW = self.suggestion.whoWhatWhere
         suggCards = Card.objects.filter(
             card_id__in=(suggWWW.character.card_id, suggWWW.room.card_id, suggWWW.weapon.card_id))
-        initDealtCards = SheetItem.objects.filter(detectiveSheet=ds, initallyDealt=True).values_list('card_id',
+        initDealtCards = SheetItem.objects.filter(detectiveSheet=ds, initiallyDealt=True).values_list('card_id',
                                                                                                      flat=True)
         return suggCards.filter(card_id__in=initDealtCards)
