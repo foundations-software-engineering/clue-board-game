@@ -129,25 +129,6 @@ class Command(BaseCommand):
         s05_01.spaceNorth = s01_05
         s05_01.save()
 
-        #these passages will exist and relate in kind of weird ways
-        psgStudy2Kitchen = SecretPassage(board = defBoard)
-        psgStudy2Kitchen.save()
-        psgLounge2Conservatory = SecretPassage(board = defBoard)
-        psgLounge2Conservatory.save()
-
-        s02_02 = Space(posX=2, posY=2, spaceCollector=psgStudy2Kitchen)
-        # this will be listed as north of the study and east of the kitchen (won't actually be here, just makes later game logic easier)
-        s02_02.spaceWest = s05_05
-        s02_02.save()
-        s01_01.spaceNorth = s02_02
-        s01_01.save()
-        # this will be listed as north of the Lounge and west of the Conservatory (won't actually be here, just makes later game logic easier)
-        s04_02 = Space(posX=4, posY=2, spaceCollector=psgLounge2Conservatory)
-        s04_02.save()
-        s05_01.spaceNorth = s04_02
-        s05_01.save()
-        s01_05.spaceWest = s04_02
-        s01_05.save()
 
         # create 6 default characters
         Character(name="Miss Scarlet", defaultSpace=s04_01, characterColor="Red").save()
