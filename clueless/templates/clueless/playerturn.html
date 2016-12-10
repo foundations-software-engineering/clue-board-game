@@ -10,24 +10,33 @@
 	 <br>
 	  <label for="player_move">Select move:</label>
 		<select class="form-control" name="player_move" id="player_move">
-		  <option value="makeAccusation">Make an Accusation</option>
-		  <option value="makeSuggestion">Make a Suggestion</option>
-		  <option value="moveSpace">Move to a room</option>
-		  <option value="endTurn">End your turn</option>
+			<option value="NOTHING">Choose an action...</option>
+			{% if "Move" in availableActions %}
+		  	<option value="moveSpace">Move game piece</option>
+			{% endif %}
+			{% if "Suggestion" in availableActions %}
+		  	<option value="makeSuggestion">Make a suggestion</option>
+			{% endif %}
+		  	<option value="endTurn">End your turn</option>
+			{% if "Accusation" in availableActions %}
+		  	<option value="makeAccusation">Make an accusation</option>
+			{% endif %}
 		</select>
-	<br>
 	<!--hard coded for now, but TODO: exclude the current space-->
 	<br>
-	  <label for="new_position" id=new_position_label>Move to the:</label>
-		<select class="form-control" name="new_position" id="new_position">
-		{% for room in roomObjects %}
-			<option value="{{room.id}}" aria-hidden="true">
-				{{room.name}}
-			</option>
-		{% endfor %}
-		</select>
-	<br>
-<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
+	<div id="new_position_div">
+		  <label for="new_position" id=new_position_label>Move to the:</label>
+			<select class="form-control" name="new_position" id="new_position">
+			{% for room in roomObjects %}
+				<option value="{{room.id}}" aria-hidden="true">
+					{{room.name}}
+				</option>
+			{% endfor %}
+			</select>
+		<br>
+
+	</div>
+	<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
 </form>
 {% else %}
 <div class="alert alert-info" role="alert">

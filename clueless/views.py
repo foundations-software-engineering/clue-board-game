@@ -325,8 +325,8 @@ def playerturn(request, game_id):
 
 				#get space on board based on room and create Move
 				new_space = Space.objects.get(spaceCollector__id = new_room)
-				move = Move(fromSpace = player.currentSpace, toSpace = new_space)
-
+				move = Move(turn = game.currentTurn, fromSpace = player.currentSpace, toSpace = new_space)
+				move.save()
 				#validate the move
 				canMove = move.validate()
 				if canMove:
@@ -347,6 +347,7 @@ def playerturn(request, game_id):
 			#logger.error('user_id or player_move not provided')
 			print('user_id or player_move not provided')
 
+	context['availableActions'] = game.currentTurn.getAvailableActions()
 	return HttpResponse(template.render(context,request))
 
 @login_required

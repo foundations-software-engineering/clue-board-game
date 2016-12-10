@@ -98,6 +98,9 @@ class Player(models.Model):
                 break
         return next_player
 
+    def isInRoom(self):
+        return Room.objects.filter(id = self.currentSpace.spaceCollector.id).count() > 0
+
 
 class Hallway(SpaceCollection):
     """
@@ -212,8 +215,20 @@ class Turn(models.Model):
         """
         :return: Set of Action subclass class objects that can be taken at this point
         """
-        #TODO: Implement this method
-        return(None)
+        validActions = list()
+        moveCount = Move.objects.filter(turn = self).count()
+        suggestionCount = Suggestion.objects.filter(turn=self).count()
+        accusationCount = Accusation.objects.filter(turn=self).count()
+        if moveCount == 0 and suggestionCount == 0 and accusationCount == 0:
+            validActions.append("Move")
+
+        if suggestionCount == 0 and accusationCount == 0 and self.player.isInRoom():
+            validActions.append("Suggestion")
+
+        if accusationCount == 0:
+            validActions.append("Accusation")
+
+        return(validActions)
 
     def takeAction(self, action):
         """

@@ -1,31 +1,38 @@
-
-$(document).ready(function(){
-		$('#new_position').hide();
-		$('#new_position_label').hide()
-		$("#player_move").change(showRooms);
-
-});
-
-function showRooms(moveType){
+function showRooms(){
 	var moveType = $('#player_move').val();
 	if(moveType=="moveSpace"){
-		$('#new_position').show();
-		$('#new_position_label').show();
+		$('#new_position_div').show();
 	}
 	else{
-		$('#new_position').hide();
-		$('#new_position_label').hide();
+		$('#new_position_div').hide();
 	}
 }
 
-$('#playerTurnForm').submit(function(event) {
-    $('#playerTurnForm').css('visibility','hidden');
-    $.post(
-        $('#playerTurnForm').attr('action'),
-        $('#playerTurnForm').serialize()
-     ).done(function(data){
-        $( "#actionBar" ).html( data );
-     });
+function toggleSubmit(){
+    $('#playerturn').prop("disabled",
+        $("#player_move").val() == "NOTHING"
+    );
+}
 
+$('#playerTurnForm').submit(function(event) {
+    if($("#player_move").val() != "NOTHING"){
+        $('#playerTurnForm').css('visibility','hidden');
+        $.post(
+            $('#playerTurnForm').attr('action'),
+            $('#playerTurnForm').serialize()
+         ).done(function(data){
+            $( "#actionBar" ).html( data );
+         });
+    }
     event.preventDefault();
+});
+
+$(document).ready(function(){
+    showRooms();
+    toggleSubmit();
+    $("#player_move").change(function() {
+        showRooms();
+        toggleSubmit();
+    });
+    showRooms("hide");
 });
