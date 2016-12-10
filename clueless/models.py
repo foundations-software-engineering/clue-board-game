@@ -526,6 +526,7 @@ class Game(models.Model):
         gamestate['hostplayer'] = {'player_id':self.hostPlayer.id, 'username': self.hostPlayer.user.username}
         gamestate['status'] = self.status
         gamestate['isPlayerTurn'] = self.currentTurn.player == player
+        gamestate['isCardReveal'] = CardReveal.objects.filter(revealingPlayer = player, status = 1).count() > 0
         gamestate['gameResult'] = player.gameResult
 
         #develop a dictionary array of player status
@@ -742,3 +743,12 @@ class CardReveal(models.Model):
         """
         self.status = 2
         self.save()
+
+    def potentialCards(self):
+        ds = self.revealingPlayer.getDetectiveSheet()
+        suggWWW = self.suggestion.whoWhatWhere
+        suggCards = Card.objects.filter(
+            card_id__in=(suggWWW.character.card_id, suggWWW.room.card_id, suggWWW.weapon.card_id))
+        initDealtCards = SheetItem.objects.filter(detectiveSheet=ds, initallyDealt=True).values_list('card_id',
+                                                                                                     flat=True)
+        return suggCards.filter(card_id__in=initDealtCards)

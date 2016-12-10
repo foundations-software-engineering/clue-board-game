@@ -90,10 +90,13 @@ function updateGameState(data){
 		}
 
 		//If it is the players turn, and it wasn't the players turn previously, reload action bar
-		if(data['gamestate']['isPlayerTurn'] != cached_is_player_turn){
-		    loadActionBar();
+		if(data['gamestate']['isPlayerTurn'] != cached_is_player_turn ||
+		   data['gamestate']['isCardReveal'] != cached_is_card_reveal
+		){
+		   loadActionBar();
 		}
 		cached_is_player_turn = data['gamestate']['isPlayerTurn']
+		cached_is_card_reveal = data['gamestate']['isCardReveal']
 
         //display the won game or lost game depending on whether the player won or lost
 		if(data['gamestate']['gameResult'] == 1){
@@ -101,6 +104,7 @@ function updateGameState(data){
 		}else if (data['gamestate']['gameResult'] == -1){
 		    $('#lostGameRow').show();
 		}
+
 		//Update canvas
 		stage.update();
 	}

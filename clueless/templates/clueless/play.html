@@ -71,6 +71,7 @@
     //Define global variables
     var cached_game_seq = -1;
     var cached_is_player_turn = false;
+    var cached_is_card_reveal = false;
     var stage;
     var canvas;
     var players = [];
@@ -119,6 +120,10 @@
 
     function loadActionBar(){
         var url = "{% url 'playerturn' game.id %}";
+        if(cached_is_card_reveal){
+            url = "{% url 'card_reveal_controller' game.id player.id %}";
+        }
+
         //Retrieve the HTML and load it
         $.get( url , function( data ) {
             $( "#actionBar" ).html( data );
