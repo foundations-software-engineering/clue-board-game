@@ -91,6 +91,9 @@ class Player(models.Model):
         players = Player.objects.filter(currentGame=self.currentGame).exclude(nonUserPlayer=True).order_by("id")
         if removeLosingPlayers:
             players = players.exclude(gameResult=-1)
+        if players.count() == 1:
+            return players[0]
+
         next_player = None
         for i, player in enumerate(players):
             if player.compare(self):
@@ -358,6 +361,8 @@ class Accusation(Action):
             self.turn.game.endGame(self.turn.player)
         else:
             self.turn.game.loseGame(self.turn.player)
+            self.turn.endTurn()
+            self.turn.game.registerGameUpdate()
 
 
 class Move(Action):

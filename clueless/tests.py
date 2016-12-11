@@ -1943,3 +1943,14 @@ class MakeAccusationControllerTest(TestCase):
         response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
                                      'weapon_id': self.goodWeapon.card_id})
         self.assertEqual(response.status_code, 200)
+
+    def test_failed_accusation_ends_turn_and_starts_next_turn(self):
+        currentTurn = self.game1.currentTurn
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        badSuspect = Character.objects.exclude(card_id = self.goodCharacter.card_id)[0]
+        response = self.c.post(url, {'suspect_id': badSuspect.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.game1.refresh_from_db()
+        self.assertNotEqual(currentTurn, self.game1.currentTurn)
+        self.assertEqual(self.game1.currentTurn.player, self.player2)
