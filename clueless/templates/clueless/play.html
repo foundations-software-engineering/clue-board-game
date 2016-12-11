@@ -26,8 +26,60 @@
 
     {% include "clueless/defaultNavbar.html" %}
     <div class="container" style="margin-top:60px">
+        <div class="row" id="lostGameRow" style="display:none;">
+            <div class = "col-sm-12">
+                <div class="alert alert-danger" role="alert">
+                <h1>Sorry, you lost!</h1>
+                </div>
+            </div>
+        </div>
+        <div class="row" id="wonGameRow" style="display:none;">
+            <div class = "col-sm-12">
+                <div class="alert alert-success" role="alert">
+                <h1>Congratulations, you won!</h1>
+                </div>
+            </div>
+        </div>
         <div class="row">
-            <div class="col-md-9">
+            <div class="col-md-3">
+                <div id="playerList">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Character</th>
+                                <th>Username</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ap in allPlayers %}
+                            <tr
+                                    {% if ap.nonUserPlayer %}
+                                    class = "active"
+                                    {% elif ap.gameResult == 1 %}
+                                    class = "success"
+                                    {% elif ap.gameResult == -1 %}
+                                    class = "danger"
+                                    {% elif ap == currentTurn.player %}
+                                    class = "info"
+                                    {% endif%}
+
+                            >
+                                <td><img height="25px" src="{% static 'clueless/images/' %}{{ap.character.characterColor}}.png"/></td>
+                                {% if ap == player %}
+                                <td><b>{{ap.character.name}}</b></td>
+                                <td><b>{{ap.user.username}}</b></td>
+                                {% else %}
+                                <td>{{ap.character.name}}</td>
+                                <td>{{ap.user.username}}</td>
+                                {% endif%}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
                 <canvas id="clueless" width="100%"></canvas>
             </div>
             <div class="col-md-3">
@@ -56,6 +108,9 @@
     <script type="text/javascript">
     //Define global variables
     var cached_game_seq = -1;
+    var cached_is_player_turn = false;
+    var cached_is_card_reveal = false;
+    var cached_is_waiting_for_card_reveal = false;
     var stage;
     var canvas;
     var players = [];
@@ -74,6 +129,12 @@
         img.onload = loadImage;
         img.src = "{% static 'clueless/images/GridBackground.png' %}";
 
+        //Call game state twice, before sending it on a timer
+        //Have to call twice because the first call to gamestate doesn't correctly render the game pieces
+        getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, -1);
+        setTimeout(function(){
+            getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, -1);
+        }, 1000);
         //Call game state in 1 second intervals
         setInterval(function(){
             getGameState("{% url 'gamestate' %}", {{game.id}}, {{player.id}}, cached_game_seq);
@@ -100,18 +161,30 @@
         stage.update();
     }
 
-    function loadActionBar()
-    {
-        //Define the action bar URL
+    function loadActionBar(){
         var url = "{% url 'playerturn' game.id %}";
+        if(cached_is_card_reveal){
+            url = "{% url 'card_reveal_controller' game.id player.id %}";
+        }
+
         //Retrieve the HTML and load it
         $.get( url , function( data ) {
             $( "#actionBar" ).html( data );
         });
     }
 
+    function loadPlayerList(){
+        //Define the playerList URL
+        var url = "{% url 'playerlist' game.id player.id %}";
+        //Retrieve the HTML and load it
+        $.get( url , function( data ) {
+            $("#playerList" ).html( data );
+        });
+    }
+
     function loadDetectiveSheet(){
-        loadDetectiveSheet("");
+        notes = $('#detectiveSheetNotes').val();
+        loadDetectiveSheet(notes);
     }
 
     function loadDetectiveSheet(notes)
@@ -130,6 +203,7 @@
         //Load the content bar -- can be reloaded as needed
         loadActionBar();
         loadDetectiveSheet();
+        loadPlayerList();
         //Update canvas size
         var ctx = document.getElementById('clueless').getContext('2d');
         //Set both to width, to keep it square

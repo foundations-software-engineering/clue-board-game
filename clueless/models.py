@@ -19,6 +19,15 @@ STATUS_CHOICES = (
     (COMPLETE, 'Complete'),
 )
 
+LOST = -1
+NEITHER = 0
+WON = 1
+GAME_RESULT_CHOICES = (
+    (LOST, "Lost"),
+    (NEITHER, "Neither"),
+    (WON, "Won")
+)
+
 class Board(models.Model):
     """
     Board object for the entire game.  Should be referenced by multiple games and space collections
@@ -56,7 +65,7 @@ class Player(models.Model):
     currentSpace = models.ForeignKey(Space)
     currentGame = models.ForeignKey('Game', blank=True, null=True) # game not defined yet, using string as lazy lookup
     character = models.ForeignKey('Character', blank=True)
-
+    gameResult = models.IntegerField(choices=GAME_RESULT_CHOICES, default=0)
 
     def __str__(self):
         if self.user is None:
@@ -77,6 +86,23 @@ class Player(models.Model):
         :return: The player's detective sheet for the current game
         """
         return DetectiveSheet.objects.get(game = self.currentGame, player = self)
+
+    def getNextPlayer(self, removeLosingPlayers = True):
+        players = Player.objects.filter(currentGame=self.currentGame).exclude(nonUserPlayer=True).order_by("id")
+        if removeLosingPlayers:
+            players = players.exclude(gameResult=-1)
+        if players.count() == 1:
+            return players[0]
+
+        next_player = None
+        for i, player in enumerate(players):
+            if player.compare(self):
+                next_player = players[(i + 1) % len(players)]
+                break
+        return next_player
+
+    def isInRoom(self):
+        return Room.objects.filter(id = self.currentSpace.spaceCollector.id).count() > 0
 
 
 class Hallway(SpaceCollection):
@@ -192,8 +218,20 @@ class Turn(models.Model):
         """
         :return: Set of Action subclass class objects that can be taken at this point
         """
-        #TODO: Implement this method
-        return(None)
+        validActions = list()
+        moveCount = Move.objects.filter(turn = self).count()
+        suggestionCount = Suggestion.objects.filter(turn=self).count()
+        accusationCount = Accusation.objects.filter(turn=self).count()
+        if moveCount == 0 and suggestionCount == 0 and accusationCount == 0:
+            validActions.append("Move")
+
+        if suggestionCount == 0 and accusationCount == 0 and self.player.isInRoom():
+            validActions.append("Suggestion")
+
+        if accusationCount == 0:
+            validActions.append("Accusation")
+
+        return(validActions)
 
     def takeAction(self, action):
         """
@@ -213,17 +251,21 @@ class Turn(models.Model):
         """
         Ends this turn
         """
-        currentPlayer = self.game.currentTurn.player
-        players = Player.objects.filter(currentGame = self.game)
+        next_player = self.game.currentTurn.player.getNextPlayer()
+        """players = Player.objects.filter(currentGame = self.game).exclude(nonUserPlayer = True).exclude(gameResult = -1)
+        next_player = None
         for i, player in enumerate(players):
             if player.compare(currentPlayer):
                 next_player = players[(i+1) % len(players)]
-                break
+                break"""
+
         #creates a turn for next player
         turn = Turn(player=next_player, game=self.game)
         turn.save()
+        self.game.refresh_from_db()
         self.game.currentTurn = turn
         self.game.save()
+
 
 class Action(models.Model):
     """
@@ -243,6 +285,12 @@ class Action(models.Model):
         Performs the action
         """
         raise NotImplementedError("Subclasses of Action need to implement abstract method performAction")
+
+    def actionDescription(self):
+        """
+                Performs the action
+                """
+        raise NotImplementedError("Subclasses of Action need to implement abstract method actionDescription")
 
 
 class Suggestion(Action):
@@ -275,6 +323,18 @@ class Suggestion(Action):
         #move player
         accusedPlayer.currentSpace = accusedSpace
         accusedPlayer.save()
+        cr = CardReveal.createCardReveal(self)
+        while cr.potentialCards().count() == 0:
+            cr.endReveal()
+            if not cr.hasNext():
+                break
+            cr = cr.createNext()
+
+    def actionDescription(self):
+        return ("<b>{}</b> suggested it was <b>{}</b> in the <b>{}</b> with the <b>{}</b>".format(
+            self.turn.player.user.username, self.whoWhatWhere.character.name, self.whoWhatWhere.room.name,
+            self.whoWhatWhere.weapon.name
+        ))
 
 
 class Accusation(Action):
@@ -283,13 +343,26 @@ class Accusation(Action):
     """
     whoWhatWhere = models.ForeignKey(WhoWhatWhere)
 
+    @classmethod
+    def createAccusation(cls, turn, suspect, room, weapon):
+        a = Accusation()
+        a.turn = turn
+        www = WhoWhatWhere(character=suspect, room=room, weapon=weapon)
+        www.save()
+        a.whoWhatWhere = www
+        a.save()
+        return (a)
+
     def validate(self):
-        #TODO: implement
         return True
 
     def performAction(self):
-        # TODO: implement
-        pass
+        if self.turn.game.isAccusationCorrect(self):
+            self.turn.game.endGame(self.turn.player)
+        else:
+            self.turn.game.loseGame(self.turn.player)
+            self.turn.endTurn()
+            self.turn.game.registerGameUpdate()
 
 
 class Move(Action):
@@ -340,7 +413,7 @@ class Game(models.Model):
     """
     caseFile = models.ForeignKey(CaseFile)
     board = models.ForeignKey(Board)
-    status = models.IntegerField(choices = STATUS_CHOICES, default = 1)
+    status = models.IntegerField(choices = STATUS_CHOICES, default = 0)
     startTime = models.DateTimeField(default = timezone.now(), blank = True)
     lastUpdateTime = models.DateTimeField(default=timezone.now(), blank=True)
     hostPlayer = models.ForeignKey(Player)
@@ -360,6 +433,7 @@ class Game(models.Model):
         randCaseFile = CaseFile.createRandom()
         randCaseFile.save()
         self.caseFile = randCaseFile
+        self.save()
         self.registerGameUpdate()
 
     def unusedCharacters(self):
@@ -472,6 +546,7 @@ class Game(models.Model):
         """
         Updates the last update time to now, and increments the current game sequence
         """
+        self.refresh_from_db()
         self.lastUpdateTime = timezone.now()
         self.currentSequence = self.currentSequence + 1
         self.save()
@@ -488,6 +563,11 @@ class Game(models.Model):
         gamestate['isHostPlayer'] = self.hostPlayer == player
         gamestate['hostplayer'] = {'player_id':self.hostPlayer.id, 'username': self.hostPlayer.user.username}
         gamestate['status'] = self.status
+        gamestate['isPlayerTurn'] = self.currentTurn.player == player
+        gamestate['isCardReveal'] = CardReveal.objects.filter(revealingPlayer = player, status = 1).count() > 0
+        gamestate['isWaitingForCardReveal'] = CardReveal.objects.filter(status=1,
+																   suggestion__turn__player=player).count() > 0
+        gamestate['gameResult'] = player.gameResult
 
         #develop a dictionary array of player status
         playerstates = []
@@ -518,12 +598,24 @@ class Game(models.Model):
 
         return gamestate
 
+    def isAccusationCorrect(self, accusation):
+        return self.caseFile.compare(accusation.whoWhatWhere)
+
     def endGame(self, winningPlayer):
         """
         Ends the game
         :param winningPlayer: Player who won
         """
-        #TODO: implement this method
+        winningPlayer.gameResult = WON
+        winningPlayer.save()
+
+        for p in Player.objects.filter(currentGame = self).exclude(id = winningPlayer.id):
+            p.gameResult = LOST
+            p.save()
+
+        self.status = 2
+        self.save()
+
         self.registerGameUpdate()
 
     def loseGame(self, losingPlayer):
@@ -531,7 +623,8 @@ class Game(models.Model):
         Ends the game for a losing player
         :param losingPlayer: Player who lost (bad accusation
         """
-        #TODO: implement this method
+        losingPlayer.gameResult = LOST
+        losingPlayer.save()
         self.registerGameUpdate()
 
     def __str__(self):
@@ -627,3 +720,75 @@ class SheetItem(models.Model):
         return ("user: {}, game: [{}], card: {}, checked: {}".format(
             self.detectiveSheet.player.user.__str__(), self.detectiveSheet.game.__str__(), self.card.__str__(), self.checked.__str__()
         ))
+
+
+class CardReveal(models.Model):
+    """
+    This class helps prompts other users to reveal cards during a suggestion
+    """
+    suggestion = models.ForeignKey(Suggestion)
+    revealingPlayer = models.ForeignKey(Player)
+    revealedCard = models.ForeignKey(Card, blank = True, null = True)
+    status = models.IntegerField(choices = STATUS_CHOICES, default = 0)
+
+    @classmethod
+    def createCardReveal(self, suggestion):
+        """
+        Given a suggestion, starts a card reveal process
+        :param suggestion:
+        :return:
+        """
+        nextPlayer = suggestion.turn.player.getNextPlayer(False)
+        cr = CardReveal(suggestion = suggestion, revealingPlayer = nextPlayer, status = 1)
+        cr.save()
+        return cr
+
+    def hasNext(self):
+        """
+        :return: True if other players need to reveal, false otherwise
+        """
+        nextPlayer = self.revealingPlayer.getNextPlayer(False)
+        return nextPlayer != self.suggestion.turn.player
+
+    def createNext(self):
+        """
+        Please check that there is a next player before calling!
+        :return: A new CardReveal object with the next player
+        """
+        nextPlayer = self.revealingPlayer.getNextPlayer(False)
+        if nextPlayer == self.suggestion.turn.player:
+            raise RuntimeError("card reveal has gone full circle")
+
+        cr = CardReveal(suggestion = self.suggestion, revealingPlayer = nextPlayer, status = 1)
+        cr.save()
+        return cr
+
+    def reveal(self, card):
+        """
+        Reveals a card to the suggesting player
+        :param card: Card to reveal
+        :return:
+        """
+        self.revealedCard = card
+        self.save()
+        #make note on suggestion player's detective sheet
+        ds = self.suggestion.turn.player.getDetectiveSheet()
+        ds.makeNote(card, True)
+        self.endReveal()
+
+    def endReveal(self):
+        """
+        Ends the reveal
+        :return:
+        """
+        self.status = 2
+        self.save()
+
+    def potentialCards(self):
+        ds = self.revealingPlayer.getDetectiveSheet()
+        suggWWW = self.suggestion.whoWhatWhere
+        suggCards = Card.objects.filter(
+            card_id__in=(suggWWW.character.card_id, suggWWW.room.card_id, suggWWW.weapon.card_id))
+        initDealtCards = SheetItem.objects.filter(detectiveSheet=ds, initiallyDealt=True).values_list('card_id',
+                                                                                                     flat=True)
+        return suggCards.filter(card_id__in=initDealtCards)

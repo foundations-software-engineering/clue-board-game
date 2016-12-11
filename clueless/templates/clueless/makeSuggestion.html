@@ -3,9 +3,8 @@
 	<input type="hidden" name="game_id" value="{{ game.id }}" />
     <input type="hidden" name="player_id" value="{{ player.id }}" />
     <input type="hidden" name="room_id" value="{{ room.card_id }}" />
-
     <h2 class="form-suggestion-heading">What is your Suggestion?</h2>
-	 <br>
+    <br>
     <h4>Room: {{ room.name }}</h4>
 	 <br>
 	  <label for="suggestion_suspect">Select suspect:</label>
@@ -13,7 +12,7 @@
             {% for csi in characterSheetItems %}
                 <option value="{{ csi.card.card_id }}" aria-hidden="true">
                     {% if csi.initiallyDealt %}
-                        {{ csi.card.name }} &nbsp;&nbsp;[dealt initially]
+                        {{ csi.card.name }} &nbsp;&nbsp;[card in hand]
                     {% elif csi.checked and csi.manuallyChecked %}
                         {{ csi.card.name }} &nbsp;&nbsp;[hunch]
                     {% elif csi.checked %}
@@ -25,12 +24,13 @@
             {% endfor %}
 		</select>
 	<br>
+
     <label for="suggestion_weapon">Select weapon:</label>
 		<select class="form-control" name="weapon_id" id="suggestion_weapon">
             {% for wsi in weaponSheetItems %}
                 <option value="{{ wsi.card.card_id }}" aria-hidden="true">
                     {% if wsi.initiallyDealt %}
-                        {{ wsi.card.name }} &nbsp;&nbsp;[dealt initially]
+                        {{ wsi.card.name }} &nbsp;&nbsp;[card in hand]
                     {% elif wsi.checked and wsi.manuallyChecked %}
                         {{ wsi.card.name }} &nbsp;&nbsp;[hunch]
                     {% elif wsi.checked %}

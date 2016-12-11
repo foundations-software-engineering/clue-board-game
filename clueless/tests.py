@@ -4,7 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 import json
 
-from clueless.models import Accusation, Card, CaseFile, Character, DetectiveSheet, Game, Move, Player, Room, SheetItem, Space, Suggestion, Weapon, WhoWhatWhere
+from clueless.models import Accusation, Card, CardReveal, CaseFile, Character, DetectiveSheet, Game, Move, Player, Room, SheetItem, Space, Suggestion, Weapon, WhoWhatWhere
 
 
 class AAA_DBSetup(TestCase):
@@ -78,6 +78,113 @@ class CardModelTests(TestCase):
         self.assertEqual(weapon3.compare(weapon1), True)
         self.assertEqual(weapon2.compare(weapon3), False)
         self.assertEqual(weapon2.compare(character1), False)
+
+
+class CardRevealModelTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.player3 = Player(user=cls.user3, character=character3, currentSpace=character3.defaultSpace)
+        cls.player3.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.addPlayer(cls.player3)
+        cls.game1.startGame(cls.user1)
+
+        cls.game1.refresh_from_db()
+        cls.player2.refresh_from_db()
+
+        turn = cls.game1.currentTurn
+        cls.characterCard = cls.player2.getDetectiveSheet().getCharacterSheetItems().filter(initiallyDealt = True)[0].card
+        cls.character = Character.objects.get(card_id = cls.characterCard.card_id)
+        room = Room.objects.get(id=cls.player1.currentSpace.spaceCollector.id)
+        weapon = Weapon.objects.all()[0]
+
+        cls.p1Suggestion = Suggestion.createSuggestion(turn, cls.character, room, weapon)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.player3.delete()
+        cls.game1.delete()
+
+    def test_createCardReveal_returns_saved_CardReveal(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        self.assertIsNotNone(cr.id)
+
+    def test_createCardReveal_has_right_player(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        self.assertEquals(cr.revealingPlayer, self.player2)
+
+    def test_hasNext_returns_true_when_has_next(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        self.assertEquals(cr.hasNext(), True)
+
+    def test_hasNext_returns_false_when_not_has_next(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        self.assertEquals(cr1.hasNext(), False)
+
+    def test_createNext_returns_saved_Card_Reveal(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        self.assertIsNotNone(cr1.id)
+
+    def test_createNext_has_right_player(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        self.assertEquals(cr1.revealingPlayer, self.player3)
+
+    def test_createNext_raises_Runtime_when_no_next(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr1 = cr.createNext()
+        with self.assertRaises(RuntimeError):
+            cr2 = cr1.createNext()
+
+    def test_reveal_makes_note_on_suggesting_player_detective_sheet(self):
+        sds = self.p1Suggestion.turn.player.getDetectiveSheet()
+        siInQuestion = SheetItem.objects.get(detectiveSheet=sds, card__card_id=self.character.card_id)
+
+        self.assertEquals(siInQuestion.checked, False)
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr.reveal(self.character)
+        siInQuestion.refresh_from_db()
+
+        self.assertEquals(siInQuestion.checked, True)
+        self.assertEquals(siInQuestion.initiallyDealt, False)
+        self.assertEquals(siInQuestion.manuallyChecked, False)
+
+    def test_endReveal_changes_status(self):
+        cr = CardReveal.createCardReveal(self.p1Suggestion)
+        cr.endReveal()
+        cr.refresh_from_db()
+        self.assertEquals(cr.status, 2)
 
 
 class CaseFileModelTests(TestCase):
@@ -536,6 +643,10 @@ class GameModelTests(TestCase):
     def test_gameStateJSON_isHostPlayer_true_when_hostplayer(self):
         self.g.initializeGame(self.player1)
         self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.g.save()
 
 
         gsj = self.g.gameStateJSON(self.player1)
@@ -544,12 +655,20 @@ class GameModelTests(TestCase):
     def test_gameStateJSON_isHostPlayer_false_when_not_hostplayer(self):
         self.g.initializeGame(self.player1)
         self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.g.save()
 
         gsj = self.g.gameStateJSON(self.player2)
         self.assertEqual(gsj['isHostPlayer'], False)
 
     def test_gameStateJSON_hostplayer_matches_hostplayer(self):
         self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
         self.g.save()
 
         gsj = self.g.gameStateJSON(self.player2)
@@ -559,6 +678,10 @@ class GameModelTests(TestCase):
 
     def test_gameStateJSON_status_matches_game_status(self):
         self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
         self.g.save()
 
         self.g.status = 0
@@ -579,14 +702,64 @@ class GameModelTests(TestCase):
     def test_gameStateJSON_playerstates_count_matches(self):
         self.g.initializeGame(self.player1)
         self.g.save()
-
         self.g.addPlayer(self.player1)
-        gsj = self.g.gameStateJSON(self.player2)
-        self.assertEqual(len(gsj['playerstates']), 1)
-
         self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.g.save()
+
         gsj = self.g.gameStateJSON(self.player2)
-        self.assertEqual(len(gsj['playerstates']), 2)
+        self.assertEqual(len(gsj['playerstates']), 6)
+
+    def test_isAccusationCorrect_true_when_correct(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        cf = self.g.caseFile
+        accusation = Accusation.createAccusation(self.g.currentTurn, cf.character, cf.room, cf.weapon)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), True)
+
+    def test_isAccusationCorrect_false_when_incorrect_character(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+        self.g.save()
+
+        cf = self.g.caseFile
+        cToUse = Character.objects.exclude(card_id = cf.character.card_id)[2]
+
+        accusation = Accusation.createAccusation(self.g.currentTurn, cToUse, cf.room, cf.weapon)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), False)
+
+    def test_isAccusationCorrect_false_when_incorrect_room(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        cf = self.g.caseFile
+        rToUse = Room.objects.exclude(card_id = cf.room.card_id)[3]
+
+        accusation = Accusation.createAccusation(self.g.currentTurn, cf.character, rToUse, cf.weapon)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), False)
+
+    def test_isAccusationCorrect_false_when_incorrect_weapon(self):
+        self.g.initializeGame(self.player1)
+        self.g.save()
+        self.g.addPlayer(self.player1)
+        self.g.addPlayer(self.player2)
+        self.g.startGame(self.user1)
+
+        cf = self.g.caseFile
+        wToUse = Weapon.objects.exclude(card_id = cf.weapon.card_id)[1]
+
+        accusation = Accusation.createAccusation(self.g.currentTurn, cf.character, cf.room, wToUse)
+        self.assertEqual(self.g.isAccusationCorrect(accusation), False)
 
 
 class SuggestionModelTests(TestCase):
@@ -670,6 +843,91 @@ class SuggestionModelTests(TestCase):
         newSuggestion.performAction()
         movedPlayer = Player.objects.get(currentGame=self.game1, character=character)
         self.assertEqual(movedPlayer.currentSpace, self.player1.currentSpace)
+
+
+class AccusationModelTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.c1 = Card.objects.all()[0]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_createAccusation_returns_saved_suggestion(self):
+        turn = self.game1.currentTurn
+        character = Character.objects.all()[0]
+        room = Room.objects.all()[3]
+        weapon = Weapon.objects.all()[0]
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        self.assertIsNotNone(newAcc.id)
+
+    def test_takeAction_correct_player_wins(self):
+        turn = self.game1.currentTurn
+        character = self.game1.caseFile.character
+        room = self.game1.caseFile.room
+        weapon = self.game1.caseFile.weapon
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        turn.takeAction(newAcc)
+        self.assertEquals(Player.objects.get(id = turn.player.id).gameResult, 1)
+
+    def test_takeAction_incorrect_player_loses(self):
+        turn = self.game1.currentTurn
+        character = self.game1.caseFile.character
+        goodRoom = self.game1.caseFile.room
+        weapon = self.game1.caseFile.weapon
+        room = Room.objects.exclude(card_id = goodRoom.card_id)[3]
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        turn.takeAction(newAcc)
+        self.assertEquals(Player.objects.get(id = turn.player.id).gameResult, -1)
+
+    def test_takeAction_correct_game_is_over(self):
+        turn = self.game1.currentTurn
+        character = self.game1.caseFile.character
+        room = self.game1.caseFile.room
+        weapon = self.game1.caseFile.weapon
+
+        newAcc = Accusation.createAccusation(turn, character, room, weapon)
+        turn.takeAction(newAcc)
+        self.assertEquals(Game.objects.get(id = turn.game.id).status, 2)
 
 
 class TurnModelTests(TestCase):
@@ -1013,6 +1271,8 @@ class GameStateViewTest(TestCase):
         cls.game1.save()
         cls.game1.addPlayer(cls.player1)
         cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+        cls.game1.save()
 
         cls.gsUrl = reverse('gamestate')
 
@@ -1521,3 +1781,176 @@ class MakeSuggestionControllerTest(TestCase):
         response = self.c.post(url, {'suspect_id': self.character.card_id, 'room_id': self.goodRoom.card_id,
                                      'weapon_id': self.weapon.card_id})
         self.assertEqual(response.status_code, 200)
+
+
+class MakeAccusationControllerTest(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # get client
+        cls.c = Client()
+        # build users
+        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.goodCharacter = cls.game1.caseFile.character
+        cls.goodRoom = cls.game1.caseFile.room
+        cls.goodWeapon = cls.game1.caseFile.weapon
+
+        cls.wrongCharacter = Character.objects.exclude(card_id = cls.goodCharacter.card_id)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_user_must_be_logged_in(self):
+        url = reverse('make_accusation_controller',args=[self.game1.id,self.player1.id])
+        response = self.c.post(url, {'suspect_id':self.goodCharacter.card_id, 'room_id':self.goodRoom.card_id, 'weapon_id':self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_post_not_allowed(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.get(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_no_parameters_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {})
+
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_suspect_id_parameter_not_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_room_id_parameter_not_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_weapon_id_parameter_not_sent(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id})
+        self.assertEqual(response.status_code, 417)
+
+    def test_fail_bad_game_id(self):
+        url = reverse('make_accusation_controller', args=[0, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_player_id(self):
+        url = reverse('make_suggestion_controller', args=[self.game1.id, 0])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_suspect_id(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': 0, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_room_id(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': 0,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_bad_weapon_id(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': 0})
+        self.assertEqual(response.status_code, 422)
+
+    def test_fail_user_doesnt_match_player(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user2)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_player_not_in_game(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.playerNotInGame.id])
+        self.c.force_login(self.user3)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_fail_not_players_turn(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player2.id])
+        self.c.force_login(self.user2)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 403)
+
+    def test_increment_game_state_when_valid(self):
+        cachedState = self.game1.currentSequence
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertNotEqual(cachedState, Game.objects.get(id = self.game1.id).currentSequence)
+
+    def test_produce_http200_when_valid(self):
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        response = self.c.post(url, {'suspect_id': self.goodCharacter.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.assertEqual(response.status_code, 200)
+
+    def test_failed_accusation_ends_turn_and_starts_next_turn(self):
+        currentTurn = self.game1.currentTurn
+        url = reverse('make_accusation_controller', args=[self.game1.id, self.player1.id])
+        self.c.force_login(self.user1)
+        badSuspect = Character.objects.exclude(card_id = self.goodCharacter.card_id)[0]
+        response = self.c.post(url, {'suspect_id': badSuspect.card_id, 'room_id': self.goodRoom.card_id,
+                                     'weapon_id': self.goodWeapon.card_id})
+        self.game1.refresh_from_db()
+        self.assertNotEqual(currentTurn, self.game1.currentTurn)
+        self.assertEqual(self.game1.currentTurn.player, self.player2)

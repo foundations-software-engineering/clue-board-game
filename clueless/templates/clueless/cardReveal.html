@@ -1,0 +1,22 @@
+{% load static %}
+<form class="form-cardreveal" action="{% url 'card_reveal_controller' game.id player.id %}" method="post" id="cardRevealForm" >{%csrf_token%}
+    <input type="hidden" name="player_id" value="{{ player.id }}" />
+    <input type="hidden" name="room_id" value="{{ room.card_id }}" />
+    <div class="alert alert-info" role="alert">
+        {{cardReveal.suggestion.actionDescription |safe}}
+    </div>
+    <h2 class="form-accusation-heading">Which card will you reveal to <b>{{cardReveal.suggestion.turn.player.user.username}}?</b></h2>
+	<br>
+	  <label for="card_reveal_card">Select card:</label>
+		<select class="form-control" name="card_id" id="card_reveal_card">
+            {% for c in cards %}
+                <option value="{{ c.card_id }}" aria-hidden="true">
+                    {{c.name}}
+                </option>
+            {% endfor %}
+		</select>
+    <br>
+<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
+</form>
+
+<script src="{% static 'clueless/js/cardReveal.js' %}"></script>

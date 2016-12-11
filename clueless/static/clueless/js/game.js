@@ -58,6 +58,8 @@ function updateGameState(data){
 
 	//Check if the game status has changed
 	if(data['changed'] == true){
+        loadPlayerList();
+        loadDetectiveSheet();
 		//Update game sequence
 		cached_game_seq = data['gamestate']['game_sequence'];
 		//Loop through each player
@@ -88,6 +90,28 @@ function updateGameState(data){
 				stage.addChild(players[characterId].createGamePiece());
 			}
 		}
+
+		//If it is the players turn, and it wasn't the players turn previously, reload action bar
+		if(data['gamestate']['isPlayerTurn'] != cached_is_player_turn ||
+		   data['gamestate']['isCardReveal'] != cached_is_card_reveal ||
+		   data['gamestate']['isWaitingForCardReveal'] != cached_is_waiting_for_card_reveal
+		){
+            cached_is_player_turn = data['gamestate']['isPlayerTurn']
+		    cached_is_card_reveal = data['gamestate']['isCardReveal']
+		    cached_is_waiting_for_card_reveal = data['gamestate']['isWaitingForCardReveal']
+		    loadActionBar();
+		}
+		cached_is_player_turn = data['gamestate']['isPlayerTurn']
+		cached_is_card_reveal = data['gamestate']['isCardReveal']
+		cached_is_waiting_for_card_reveal = data['gamestate']['isWaitingForCardReveal']
+
+        //display the won game or lost game depending on whether the player won or lost
+		if(data['gamestate']['gameResult'] == 1){
+		    $('#wonGameRow').show();
+		}else if (data['gamestate']['gameResult'] == -1){
+		    $('#lostGameRow').show();
+		}
+
 		//Update canvas
 		stage.update();
 	}

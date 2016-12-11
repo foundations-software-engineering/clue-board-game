@@ -6,7 +6,7 @@ from django.core.validators import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Action, Move, Board, Card, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Action, Move, Board, Card, CardReveal, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
 import logging
 
 # Get an instance of a logger
@@ -194,6 +194,9 @@ def begingame(request, game_id):
 	except Game.DoesNotExist:
 		return redirect('index')
 
+	if game.status > 0:
+		return redirect('playgame', game.id)
+
 	#get a list of players currently in the game
 	players = Player.objects.filter(currentGame__id = game_id)
 	numOfPlayers = players.count()
@@ -225,11 +228,46 @@ def playgame(request, game_id):
 
 	spaces = Space.objects.all().order_by('posY', 'posX')
 	context = {"game":game, "player":player, "spaces":spaces}
+	context['currentTurn'] = game.currentTurn
+	context['allPlayers'] = Player.objects.filter(currentGame = game)
 	template = loader.get_template('clueless/play.html')
 	return HttpResponse(template.render(context,request))
 
 @login_required
+def playerlist(request, game_id, player_id):
+	"""
+	:param request:
+	:param game_id: game_id of a game at status Started
+	:param player_id: player_id of logged in player
+	:return:
+	"""
+	try:
+		game = Game.objects.get(id = game_id)
+		player = Player.objects.get(id = player_id, currentGame = game)
+	except Game.DoesNotExist:
+		logger.error("Requested game_id doesn't exist")
+		return HttpResponse(status=422, content="Requested game doesn't exist")
+	except Player.DoesNotExist:
+		logger.error("Requested player_id doesn't exist or is not part of this game")
+		return HttpResponse(status=422, content="Requested player_id doesn't exist or is not part of this game")
 
+	#check for permissions
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status = 403, content="logged in user does not match player_id")
+
+	#get all of the sheet items for the player
+	ds = player.getDetectiveSheet()
+
+	template = loader.get_template('clueless/playerList.html')
+	context = {}
+	context['game'] = game
+	context['player'] = player
+	context['currentTurn'] = game.currentTurn
+	context['allPlayers'] = Player.objects.filter(currentGame=game).order_by("id")
+	return HttpResponse(template.render(context, request))
+
+@login_required
 def playerturn(request, game_id):
 	context = {}
 	template = loader.get_template('clueless/playerturn.html')
@@ -240,11 +278,16 @@ def playerturn(request, game_id):
 	game = Game.objects.get(id = game_id)
 	context['game'] = game
 	player = Player.objects.get(user = user_id, currentGame=game)
-
 	if player.compare(game.currentTurn.player):
 		context['isPlayerTurn'] = True
+		context['hasActiveSuggestion'] = CardReveal.objects.filter(status=1,
+																   suggestion__turn__player=player).count() > 0
+
 	else:
 		context['isPlayerTurn'] = False
+		context['hasActiveSuggestion'] = False
+
+	context['player'] = player
 	context['roomObjects'] = Room.objects.all()
 
 	if request.method == 'POST':
@@ -258,6 +301,11 @@ def playerturn(request, game_id):
 
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
+				ds = player.getDetectiveSheet()
+				context['roomSheetItems'] = ds.getRoomSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
+				context['characterSheetItems'] = ds.getCharacterSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
+				context['weaponSheetItems'] = ds.getWeaponSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
+				context['player'] = player
 				template = loader.get_template('clueless/makeAccusation.html')
 
 			elif player_move == "makeSuggestion":
@@ -277,8 +325,8 @@ def playerturn(request, game_id):
 
 				#get space on board based on room and create Move
 				new_space = Space.objects.get(spaceCollector__id = new_room)
-				move = Move(fromSpace = player.currentSpace, toSpace = new_space)
-
+				move = Move(turn = game.currentTurn, fromSpace = player.currentSpace, toSpace = new_space)
+				move.save()
 				#validate the move
 				canMove = move.validate()
 				if canMove:
@@ -289,13 +337,17 @@ def playerturn(request, game_id):
 					logger.error("Player cannot be moved to the ", Room.objects.get(id=new_room))
 
 			elif player_move =="endTurn":
-				turn = Turn.objects.get(player=player, game=game)
-				turn.endTurn()
+				turn = game.currentTurn
+				if(turn.player == player):
+					turn.endTurn()
+					game.registerGameUpdate()
+
 		else:
 			#TODO: replace with logging later(don't want to replicate from grehg's but will use below commented out code)
 			#logger.error('user_id or player_move not provided')
 			print('user_id or player_move not provided')
 
+	context['availableActions'] = game.currentTurn.getAvailableActions()
 	return HttpResponse(template.render(context,request))
 
 @login_required
@@ -518,9 +570,70 @@ def begin_game_controller(request):
 	else:
 		logger.error('POST expected, actual ' + request.method)
 
+def card_reveal_controller(request, game_id, player_id):
+	context = {}
+
+	try:
+		game = Game.objects.get(id=game_id)
+		player = Player.objects.get(id=player_id)
+	except Game.DoesNotExist:
+		logger.error('invalid game_id')
+		return HttpResponse(status=422, content="invalid game_id")
+	except Player.DoesNotExist:
+		logger.error('invalid player_id')
+		return HttpResponse(status=422, content='invalid player_id')
+
+	# user must be the same as the player, must be in the game, and sheet item must belong to player
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status=403, content="logged in user does not match player_id")
+	elif player.currentGame != game:
+		logger.error('player is not in requested game')
+		return HttpResponse(status=403, content="player is not in requested game")
+
+	try:
+		cardReveal = CardReveal.objects.get(revealingPlayer = player, status = 1)
+	except CardReveal.DoesNotExist:
+		logger.error('no card reveal for this player at this time')
+		return HttpResponse(status=422, content='no card reveal for this player at this time')
+
+	if request.method == "POST":
+		vpp = validatePostParams(request, ["card_id"])
+		if vpp is not None:
+			return vpp
+
+		card_id = request.POST.get("card_id")
+
+		# get the object instances
+		try:
+			card = Card.objects.get(card_id=card_id)
+		except Card.DoesNotExist:
+			logger.error('invalid card')
+			return HttpResponse(status=422, content='invalid card')
+
+		cardReveal.reveal(card)
+		if cardReveal.hasNext():
+			cr = cardReveal.createNext()
+			while cr.potentialCards().count() == 0:
+				cr.endReveal()
+				if not cr.hasNext():
+					break
+				cr = cr.createNext()
+
+		game.registerGameUpdate()
+
+
+	context['game'] = game
+	context['player'] = player
+	context['cardReveal'] = cardReveal
+	#get the cards the person has that match the suggestion
+	context['cards'] = cardReveal.potentialCards().order_by("name")
+	template = loader.get_template('clueless/cardReveal.html')
+	return HttpResponse(template.render(context, request))
+
 def make_suggestion_controller(request, game_id, player_id):
 	"""
-	Creates a suggestion that is composed of a character, weapon and room
+	Creates a accusation that is composed of a character, weapon and room
 	"""
 	# parse request
 	# validate necessary fields are present
@@ -578,50 +691,65 @@ def make_suggestion_controller(request, game_id, player_id):
 	request.method = "GET"
 	return playerturn(request, game_id)
 
-def make_accusation(request):
+def make_accusation_controller(request, game_id, player_id):
 	"""
 	Creates a accusation that is composed of a character, weapon and room.
 	"""
-	if request.method == 'POST':
-		if 'character' or 'weapon' or 'room' not in request.POST:
-			logger.error('character or weapon or room not provided')
-			# TODO Redirect to appropriate error page
-		else:
-			# Gets our expected id fields from the user's POST
-			character_name = request.POST('character_name')
-			weapon_id = request.POST('weapon_id')
-			room_id = request.POST('room_id')
+	# parse request
+	# validate necessary fields are present
+	vpp = validatePostParams(request, ["suspect_id", "room_id", "weapon_id"])
+	if vpp is not None:
+		return vpp
 
-			try:
-				character = User.objects.get(character = character_name)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.error('''character not found (Did you forget to add the
-				character in the admin panel?''')
-				# TODO Redirect to appropriate error page
+	suspect_id = request.POST.get("suspect_id")
+	room_id = request.POST.get("room_id")
+	weapon_id = request.POST.get("weapon_id")
 
-			try:
-				weapon = User.objects.get(weapon = weapon_id)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.error('''weapon not found (Did you forget to add the
-				weapon in the admin panel?''')
-				# TODO Redirect to appropriate error page
+	# get the object instances
+	try:
+		game = Game.objects.get(id=game_id)
+		player = Player.objects.get(id=player_id)
+		suspect = Character.objects.get(card_id=suspect_id)
+		room = Room.objects.get(card_id=room_id)
+		weapon = Weapon.objects.get(card_id=weapon_id)
+	except Game.DoesNotExist:
+		logger.error('invalid game_id')
+		return HttpResponse(status=422, content="invalid game_id")
+	except Player.DoesNotExist:
+		logger.error('invalid player_id')
+		return HttpResponse(status=422, content='invalid player_id')
+	except Character.DoesNotExist:
+		logger.error('invalid suspect')
+		return HttpResponse(status=422, content='invalid suspect')
+	except Room.DoesNotExist:
+		logger.error('invalid room')
+		return HttpResponse(status=422, content='invalid room')
+	except Weapon.DoesNotExist:
+		logger.error('invalid weapon')
+		return HttpResponse(status=422, content='invalid weapon')
 
-			try:
-				room = User.objects.get(room = room_id)
-			except ObjectDoesNotExist: # Possible User.DoesNotExist
-				logger.error('''room not found (Did you forget to add the
-				room in the admin panel?''')
-				# TODO Redirect to appropriate error page
+	turn = game.currentTurn
 
-			whoWhatWhere = WhoWhatWhere()
-			whoWhatWhere.character = character
-			whoWhatWhere.weapon = weapon
-			whoWhatWhere.room = room
+	# user must be the same as the player, must be in the game, and sheet item must belong to player
+	if request.user != player.user:
+		logger.error('player_id does not match user')
+		return HttpResponse(status=403, content="logged in user does not match player_id")
+	elif player.currentGame != game:
+		logger.error('player is not in requested game')
+		return HttpResponse(status=403, content="player is not in requested game")
+	elif turn.player != player:
+		logger.error('it is not this players turn')
+		return HttpResponse(status=403, content="it is not this players turn")
 
-			accusation = Accusation()
-			accusation.whoWhatWhere = whoWhatWhere
-	else:
-		logger.error('POST expected, actual ' + request.method)
+	acc = Accusation.createAccusation(turn, suspect, room, weapon)
+	actionStatus = turn.takeAction(acc)
+	if actionStatus is not None:
+		return (HttpResponse(status=500, content="error making accusation"))
+
+	game.registerGameUpdate()
+
+	request.method = "GET"
+	return playerturn(request, game_id)
 
 def manualsheetitemcheck(request, game_id, player_id):
 	"""
