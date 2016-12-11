@@ -107,17 +107,27 @@ class Player(models.Model):
 
     def getNextPlayer(self, removeLosingPlayers = True):
         players = Player.objects.filter(currentGame=self.currentGame).exclude(nonUserPlayer=True).order_by("id")
-        if removeLosingPlayers:
-            players = players.exclude(gameResult=-1)
-        if players.count() == 1:
-            return players[0]
 
+#        if removeLosingPlayers:
+#            players = players.exclude(gameResult=-1)
         next_player = None
-        for i, player in enumerate(players):
-            if player.compare(self):
-                next_player = players[(i + 1) % len(players)]
-                break
-        return next_player
+        if removeLosingPlayers and players.exclude(gameResult=-1).count() == 1:
+            next_player = players.exclude(gameResult=-1)[0]
+        elif players.count() == 1:
+            next_player = players[0]
+            if removeLosingPlayers and next_player.gameResult < 0:
+                return None
+        else:
+            print(players)
+            next_player = None
+            for i, player in enumerate(players):
+                if player.compare(self):
+                    next_player = players[(i + 1) % len(players)]
+                    break
+        if not removeLosingPlayers or next_player.gameResult >= 0:
+            return next_player
+        else:
+            return next_player.getNextPlayer(removeLosingPlayers)
 
     def isInRoom(self):
         return Room.objects.filter(id = self.currentSpace.spaceCollector.id).count() > 0
@@ -331,6 +341,7 @@ class Turn(models.Model):
         """
         Ends this turn
         """
+        print(self.game.currentTurn.player)
         next_player = self.game.currentTurn.player.getNextPlayer()
         """players = Player.objects.filter(currentGame = self.game).exclude(nonUserPlayer = True).exclude(gameResult = -1)
         next_player = None
