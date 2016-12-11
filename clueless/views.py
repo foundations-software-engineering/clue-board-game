@@ -343,8 +343,15 @@ def playerturn(request, game_id):
 					# logger.error("Player cannot be moved to the ", str(room.name))
 
 			elif player_move =="endTurn":
+				# check if player is in hallway
 				turn = game.currentTurn
-				if(turn.player == player):
+				if Move.objects.filter(turn = turn).count() == 0:
+					hallwaySpaces = Hallway.objects.all()
+					for hallway in hallwaySpaces:
+						hallwaySpace = Space.objects.get(spaceCollector__id=hallway.id)
+						if player.currentSpace == hallwaySpace:
+							return HttpResponse(status=403, content="player cannot start and end turn in hallway")
+				if (turn.player == player):
 					turn.endTurn()
 					game.registerGameUpdate()
 
