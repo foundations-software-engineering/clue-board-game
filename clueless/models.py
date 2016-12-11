@@ -255,7 +255,7 @@ class Turn(models.Model):
         """players = Player.objects.filter(currentGame = self.game).exclude(nonUserPlayer = True).exclude(gameResult = -1)
         next_player = None
         for i, player in enumerate(players):
-            if player.compare(currentPlayer):
+            if player.character.compare(currentPlayer.character):
                 next_player = players[(i+1) % len(players)]
                 break"""
 
