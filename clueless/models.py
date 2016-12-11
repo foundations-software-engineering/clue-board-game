@@ -413,7 +413,11 @@ class Accusation(Action):
             self.turn.game.endGame(self.turn.player)
         else:
             self.turn.game.loseGame(self.turn.player)
-            self.turn.endTurn()
+            if Player.objects.filter(currentGame = self.turn.game, gameResult = 0, nonUserPlayer = False).count() == 1:
+                winningPlayer = Player.objects.get(currentGame = self.turn.game, gameResult = 0, nonUserPlayer = False)
+                self.turn.game.endGame(winningPlayer)
+            else:
+                self.turn.endTurn()
             self.turn.game.registerGameUpdate()
 
 
