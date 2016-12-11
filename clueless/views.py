@@ -6,7 +6,8 @@ from django.core.validators import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.template import Context, loader
-from clueless.models import Accusation, Action, Move, Board, Card, CardReveal, Character, Game, Player,Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+from clueless.models import Accusation, Action, Move, Board, Card, CardReveal, Character, Game, Hallway, Player, Turn, Room, SheetItem, STATUS_CHOICES, Suggestion, Weapon, WhoWhatWhere, Space
+
 import logging
 
 # Get an instance of a logger
@@ -288,6 +289,8 @@ def playerturn(request, game_id):
 
 	context['player'] = player
 	context['roomObjects'] = Room.objects.all()
+	context['hallwayObjects'] = Hallway.objects.all()
+	context['validMoves'] = player.validMoves()
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
@@ -324,8 +327,11 @@ def playerturn(request, game_id):
 
 				#get space on board based on room and create Move
 				new_space = Space.objects.get(spaceCollector__id = new_room)
+
 				move = Move(turn = game.currentTurn, fromSpace = player.currentSpace, toSpace = new_space)
 				move.save()
+				print("player wants to move from ", player.currentSpace, " to ", new_space)
+
 				#validate the move
 				canMove = move.validate()
 				if canMove:
@@ -333,11 +339,20 @@ def playerturn(request, game_id):
 					player.save()
 					game.registerGameUpdate()
 				else:
-					logger.error("Player cannot be moved to the ", Room.objects.get(id=new_room))
+					room =  Room.objects.get(id=new_room)
+					print("Player cannot be moved to the ", str(room.name))
+					# logger.error("Player cannot be moved to the ", str(room.name))
 
 			elif player_move =="endTurn":
+				# check if player is in hallway
 				turn = game.currentTurn
-				if(turn.player == player):
+				if Move.objects.filter(turn = turn).count() == 0:
+					hallwaySpaces = Hallway.objects.all()
+					for hallway in hallwaySpaces:
+						hallwaySpace = Space.objects.get(spaceCollector__id=hallway.id)
+						if player.currentSpace == hallwaySpace:
+							return HttpResponse(status=403, content="player cannot start and end turn in hallway")
+				if (turn.player == player):
 					turn.endTurn()
 					game.registerGameUpdate()
 

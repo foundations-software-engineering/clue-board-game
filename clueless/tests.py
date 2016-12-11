@@ -766,11 +766,11 @@ class SuggestionModelTests(TestCase):
     @classmethod
     def setUpClass(cls):
         # build users
-        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1 = User.objects.create_user('suggestiontestuser1', 'a@a.com', 'password')
         cls.user1.save()
-        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2 = User.objects.create_user('suggestiontestuser2', 'a@a.com', 'password')
         cls.user2.save()
-        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3 = User.objects.create_user('suggestiontestuser3', 'a@a.com', 'password')
         cls.user3.save()
 
         # build some players
@@ -849,11 +849,11 @@ class AccusationModelTests(TestCase):
     @classmethod
     def setUpClass(cls):
         # build users
-        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1 = User.objects.create_user('turntestuser1', 'a@a.com', 'password')
         cls.user1.save()
-        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2 = User.objects.create_user('turntestuser2', 'a@a.com', 'password')
         cls.user2.save()
-        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3 = User.objects.create_user('turntestuser3', 'a@a.com', 'password')
         cls.user3.save()
 
         # build some players
@@ -1072,7 +1072,7 @@ class TurnModelTests(TestCase):
 
     def test_takeAction_on_move_no_error(self):
         turn = self.game1.currentTurn
-        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=5, posY=2))
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=4, posY=1))
         newMove.save()
         self.assertIsNone(turn.takeAction(newMove))
 
@@ -1169,11 +1169,11 @@ class DetectiveSheetViewTest(TestCase):
         # get client
         cls.c = Client()
         # build users
-        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1 = User.objects.create_user('detectivesheetviewtestuser1', 'a@a.com', 'password')
         cls.user1.save()
-        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2 = User.objects.create_user('detectivesheetviewtestuser2', 'a@a.com', 'password')
         cls.user2.save()
-        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3 = User.objects.create_user('detectivesheetviewtestuser3', 'a@a.com', 'password')
         cls.user3.save()
 
         # build some players
@@ -1246,11 +1246,11 @@ class GameStateViewTest(TestCase):
         #get client
         cls.c = Client()
         #build users
-        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1 = User.objects.create_user('playgametestuser1', 'a@a.com', 'password')
         cls.user1.save()
-        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2 = User.objects.create_user('playgametestuser2', 'a@a.com', 'password')
         cls.user2.save()
-        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3 = User.objects.create_user('playgametestuser3', 'a@a.com', 'password')
         cls.user3.save()
 
         #build some players
@@ -1388,11 +1388,11 @@ class ManualSheetItemCheckViewTest(TestCase):
         # get client
         cls.c = Client()
         # build users
-        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1 = User.objects.create_user('manualsheetitemtestuser1', 'a@a.com', 'password')
         cls.user1.save()
-        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2 = User.objects.create_user('manualsheetitemtestuser2', 'a@a.com', 'password')
         cls.user2.save()
-        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3 = User.objects.create_user('manualsheetitemtestuser3', 'a@a.com', 'password')
         cls.user3.save()
 
         # build some players
@@ -1614,11 +1614,11 @@ class MakeSuggestionControllerTest(TestCase):
         # get client
         cls.c = Client()
         # build users
-        cls.user1 = User.objects.create_user('gamestatetestuser1', 'a@a.com', 'password')
+        cls.user1 = User.objects.create_user('makesuggestiontestuser1', 'a@a.com', 'password')
         cls.user1.save()
-        cls.user2 = User.objects.create_user('gamestatetestuser2', 'a@a.com', 'password')
+        cls.user2 = User.objects.create_user('makesuggestiontestuser2', 'a@a.com', 'password')
         cls.user2.save()
-        cls.user3 = User.objects.create_user('gamestatetestuser3', 'a@a.com', 'password')
+        cls.user3 = User.objects.create_user('makesuggestiontestuser3', 'a@a.com', 'password')
         cls.user3.save()
 
         # build some players

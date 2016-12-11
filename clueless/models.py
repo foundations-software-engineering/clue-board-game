@@ -104,8 +104,60 @@ class Player(models.Model):
     def isInRoom(self):
         return Room.objects.filter(id = self.currentSpace.spaceCollector.id).count() > 0
 
+    def validMoves(self):
+        currentSpace = self.currentSpace
+        validMoves = []
+
+        roomObjects = Room.objects.all()
+        hallwayObjects = Hallway.objects.all()
+
+        for room in roomObjects:
+            roomSpace = Space.objects.get(spaceCollector__id = room.id)
+            print(roomSpace)
+            if self.currentSpace == roomSpace:
+                if hasattr(self.currentSpace, 'spaceNorth'):
+                    if(self.currentSpace.spaceNorth is not None):
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceNorth)
+                        if(hw.count() > 0):
+                            validMoves.append(hw[0])
+                if hasattr(self.currentSpace, 'spaceEast'):
+                    if(self.currentSpace.spaceEast is not None):
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceEast)
+                        if (hw.count() > 0):
+                            validMoves.append(hw[0])
+                if hasattr(self.currentSpace, 'spaceSouth'):
+                    if(self.currentSpace.spaceSouth is not None):
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceSouth)
+                        if (hw.count() > 0):
+                            validMoves.append(hw[0])
+                if hasattr(self.currentSpace, 'spaceWest'):
+                    if(self.currentSpace.spaceWest is not None):
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceWest)
+                        if (hw.count() > 0):
+                            validMoves.append(hw[0])
+
+        for hall in hallwayObjects:
+            hallSpace = Space.objects.get(spaceCollector__id = hall.id)
+            print(hall)
+            if self.currentSpace == hallSpace:
+                if hasattr(self.currentSpace, 'spaceNorth'):
+                    if self.currentSpace.spaceNorth is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceNorth))
+                if hasattr(self.currentSpace, 'spaceEast'):
+                    if self.currentSpace.spaceEast is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceEast))
+                if hasattr(self.currentSpace, 'spaceSouth'):
+                    if self.currentSpace.spaceSouth is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceSouth))
+                if hasattr(self.currentSpace, 'spaceWest'):
+                    if self.currentSpace.spaceWest is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceWest))
+
+        return validMoves
+
 
 class Hallway(SpaceCollection):
+    name = models.CharField(max_length = 50, blank=True)
     """
     Hallway in the game
     """
@@ -267,7 +319,6 @@ class Turn(models.Model):
         self.game.save()
 
 
-
 class Action(models.Model):
     """
     Any player action a player can take during a turn
@@ -362,7 +413,11 @@ class Accusation(Action):
             self.turn.game.endGame(self.turn.player)
         else:
             self.turn.game.loseGame(self.turn.player)
-            self.turn.endTurn()
+            if Player.objects.filter(currentGame = self.turn.game, gameResult = 0, nonUserPlayer = False).count() == 1:
+                winningPlayer = Player.objects.get(currentGame = self.turn.game, gameResult = 0, nonUserPlayer = False)
+                self.turn.game.endGame(winningPlayer)
+            else:
+                self.turn.endTurn()
             self.turn.game.registerGameUpdate()
 
 
@@ -374,11 +429,30 @@ class Move(Action):
     toSpace = models.ForeignKey(Space, related_name='toSpace')
 
     def validate(self):
-        #TODO: implement
-        if (self.fromSpace.posX + 2 == self.toSpace.posX) or (self.fromSpace.posX - 2  == self.toSpace.posX) or (self.fromSpace.posY+ 2  == self.toSpace.posY) or (self.fromSpace.posY - 2  == self.toSpace.posY):
-            return True
+        game = self.turn.game
+        if self.checkHallwayEmpty(game):
+            if hasattr(self.fromSpace, 'spaceNorth'):
+                if self.toSpace == self.fromSpace.spaceNorth:
+                    return True
+            if hasattr(self.fromSpace, 'spaceEast'):
+                if self.toSpace == self.fromSpace.spaceEast:
+                    return True
+            if hasattr(self.fromSpace, 'spaceSouth'):
+                if self.toSpace == self.fromSpace.spaceSouth:
+                    return True
+            if hasattr(self.fromSpace, 'spaceWest'):
+                if self.toSpace == self.fromSpace.spaceWest:
+                    return True
+            return False
         else:
             return False
+
+    def checkHallwayEmpty(self, game):
+        players = Player.objects.filter(currentGame =game, nonUserPlayer = False)
+        for player in players:
+            if self.toSpace == player.currentSpace:
+                return False
+        return True
 
     def performAction(self):
         # TODO: implement
