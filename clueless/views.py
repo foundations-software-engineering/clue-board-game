@@ -291,6 +291,7 @@ def playerturn(request, game_id):
 	context['roomObjects'] = Room.objects.all()
 	context['hallwayObjects'] = Hallway.objects.all()
 	context['validMoves'] = player.validMoves()
+	print(player.validMoves())
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
@@ -330,9 +331,15 @@ def playerturn(request, game_id):
 
 				move = Move(turn = game.currentTurn, fromSpace = player.currentSpace, toSpace = new_space)
 				move.save()
-				print("player wants to move from ", player.currentSpace, " to ", new_space)
 
-				#validate the move
+				moveStatus = game.currentTurn.takeAction(move)
+				if moveStatus is not None:
+					return (HttpResponse(status=500, content="error making move"))
+
+				game.registerGameUpdate()
+				#print("player wants to move from ", player.currentSpace, " to ", new_space)
+				"""
+				# validate the move
 				canMove = move.validate()
 				if canMove:
 					player.currentSpace = new_space
@@ -341,7 +348,7 @@ def playerturn(request, game_id):
 				else:
 					room =  Room.objects.get(id=new_room)
 					print("Player cannot be moved to the ", str(room.name))
-					# logger.error("Player cannot be moved to the ", str(room.name))
+					# logger.error("Player cannot be moved to the ", str(room.name))"""
 
 			elif player_move =="endTurn":
 				# check if player is in hallway

@@ -762,6 +762,157 @@ class GameModelTests(TestCase):
         self.assertEqual(self.g.isAccusationCorrect(accusation), False)
 
 
+class MoveModelTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # build users
+        cls.user1 = User.objects.create_user('movetestuser1', 'a@a.com', 'password')
+        cls.user1.save()
+        cls.user2 = User.objects.create_user('movetestuser2', 'a@a.com', 'password')
+        cls.user2.save()
+        cls.user3 = User.objects.create_user('movetestuser3', 'a@a.com', 'password')
+        cls.user3.save()
+
+        # build some players
+        character1 = Character.objects.all()[0]
+        character2 = Character.objects.all()[1]
+        character3 = Character.objects.all()[2]
+        cls.player1 = Player(user=cls.user1, character=character1, currentSpace=character1.defaultSpace)
+        cls.player1.save()
+        cls.player2 = Player(user=cls.user2, character=character2, currentSpace=character2.defaultSpace)
+        cls.player2.save()
+        cls.playerNotInGame = Player(user=cls.user1, character=character3, currentSpace=character3.defaultSpace)
+        cls.playerNotInGame.save()
+
+        cls.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+        cls.player1.save()
+        cls.player2.currentSpace = Space.objects.get(posX=5, posY=2)
+        cls.player2.save()
+
+        cls.game1 = Game()
+        cls.game1.initializeGame(cls.player1)
+        cls.game1.save()
+        cls.game1.addPlayer(cls.player1)
+        cls.game1.addPlayer(cls.player2)
+        cls.game1.startGame(cls.user1)
+
+        cls.c1 = Card.objects.all()[0]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.c = None
+        cls.user1.delete()
+        cls.user2.delete()
+        cls.user3.delete()
+        cls.player1.delete()
+        cls.player2.delete()
+        cls.playerNotInGame.delete()
+        cls.game1.delete()
+
+    def test_takeAction_room_to_empty_hallway_no_error(self):
+        self.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+        self.player1.save()
+        self.player2.currentSpace = Space.objects.get(posX=5, posY=2)
+        self.player2.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=4, posY=1))
+        newMove.save()
+        self.assertIsNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertEquals(self.player1.currentSpace.posX, 4)
+        self.assertEquals(self.player1.currentSpace.posY, 1)
+
+    def test_takeAction_hallway_to_empty_room_no_error(self):
+        self.player1.currentSpace = Space.objects.get(posX=4, posY=1)
+        self.player1.save()
+        self.player2.currentSpace = Space.objects.get(posX=5, posY=2)
+        self.player2.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=5, posY=1))
+        newMove.save()
+        self.assertIsNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertEquals(self.player1.currentSpace.posX, 5)
+        self.assertEquals(self.player1.currentSpace.posY, 1)
+
+    def test_takeAction_hallway_to_nonempty_room_no_error(self):
+        self.player1.currentSpace = Space.objects.get(posX=4, posY=1)
+        self.player1.save()
+        self.player2.currentSpace = Space.objects.get(posX=5, posY=1)
+        self.player2.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=5, posY=1))
+        newMove.save()
+        self.assertIsNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertEquals(self.player1.currentSpace.posX, 5)
+        self.assertEquals(self.player1.currentSpace.posY, 1)
+
+    def test_takeAction_room_to_nonempty_hallway_error(self):
+        self.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+        self.player1.save()
+        self.player2.currentSpace = Space.objects.get(posX=4, posY=1)
+        self.player2.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=4, posY=1))
+        newMove.save()
+        self.assertIsNotNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertNotEquals(self.player1.currentSpace.posX, 4)
+
+    def test_takeAction_secret_passage_to_conservatory(self):
+        self.player1.currentSpace = Space.objects.get(posX=5, posY=1)
+        self.player1.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=1, posY=5))
+        newMove.save()
+        self.assertIsNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertEquals(self.player1.currentSpace.posX, 1)
+        self.assertEquals(self.player1.currentSpace.posY, 5)
+
+    def test_takeAction_secret_passage_to_lounge(self):
+        self.player1.currentSpace = Space.objects.get(posX=1, posY=5)
+        self.player1.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=5, posY=1))
+        newMove.save()
+        self.assertIsNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertEquals(self.player1.currentSpace.posX, 5)
+        self.assertEquals(self.player1.currentSpace.posY, 1)
+
+    def test_takeAction_secret_passage_to_study(self):
+        self.player1.currentSpace = Space.objects.get(posX=5, posY=5)
+        self.player1.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=1, posY=1))
+        newMove.save()
+        self.assertIsNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertEquals(self.player1.currentSpace.posX, 1)
+        self.assertEquals(self.player1.currentSpace.posY, 1)
+
+    def test_takeAction_secret_passage_to_kitchen(self):
+        self.player1.currentSpace = Space.objects.get(posX=1, posY=1)
+        self.player1.save()
+
+        turn = self.game1.currentTurn
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=5, posY=5))
+        newMove.save()
+        self.assertIsNone(turn.takeAction(newMove))
+        self.player1.refresh_from_db()
+        self.assertEquals(self.player1.currentSpace.posX, 5)
+        self.assertEquals(self.player1.currentSpace.posY, 5)
+
+
 class SuggestionModelTests(TestCase):
     @classmethod
     def setUpClass(cls):
