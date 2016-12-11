@@ -117,16 +117,24 @@ class Player(models.Model):
             if self.currentSpace == roomSpace:
                 if hasattr(self.currentSpace, 'spaceNorth'):
                     if(self.currentSpace.spaceNorth is not None):
-                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceNorth))
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceNorth)
+                        if(hw.count() > 0):
+                            validMoves.append(hw[0])
                 if hasattr(self.currentSpace, 'spaceEast'):
                     if(self.currentSpace.spaceEast is not None):
-                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceEast))
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceEast)
+                        if (hw.count() > 0):
+                            validMoves.append(hw[0])
                 if hasattr(self.currentSpace, 'spaceSouth'):
                     if(self.currentSpace.spaceSouth is not None):
-                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceSouth))
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceSouth)
+                        if (hw.count() > 0):
+                            validMoves.append(hw[0])
                 if hasattr(self.currentSpace, 'spaceWest'):
                     if(self.currentSpace.spaceWest is not None):
-                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceWest))
+                        hw = Hallway.objects.filter(space=self.currentSpace.spaceWest)
+                        if (hw.count() > 0):
+                            validMoves.append(hw[0])
 
         for hall in hallwayObjects:
             hallSpace = Space.objects.get(spaceCollector__id = hall.id)
@@ -311,7 +319,6 @@ class Turn(models.Model):
         self.game.save()
 
 
-
 class Action(models.Model):
     """
     Any player action a player can take during a turn
@@ -417,8 +424,8 @@ class Move(Action):
     fromSpace = models.ForeignKey(Space, related_name='fromSpace')
     toSpace = models.ForeignKey(Space, related_name='toSpace')
 
-    def validate(self, game):
-
+    def validate(self):
+        game = self.turn.game
         if self.checkHallwayEmpty(game):
             if hasattr(self.fromSpace, 'spaceNorth'):
                 if self.toSpace == self.fromSpace.spaceNorth:
@@ -437,7 +444,7 @@ class Move(Action):
             return False
 
     def checkHallwayEmpty(self, game):
-        players = Player.objects.filter(currentGame =game)
+        players = Player.objects.filter(currentGame =game, nonUserPlayer = False)
         for player in players:
             if self.toSpace == player.currentSpace:
                 return False

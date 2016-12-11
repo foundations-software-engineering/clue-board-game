@@ -1072,7 +1072,7 @@ class TurnModelTests(TestCase):
 
     def test_takeAction_on_move_no_error(self):
         turn = self.game1.currentTurn
-        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=5, posY=2))
+        newMove = Move(turn=turn, fromSpace=self.player1.currentSpace, toSpace=Space.objects.get(posX=4, posY=1))
         newMove.save()
         self.assertIsNone(turn.takeAction(newMove))
 
