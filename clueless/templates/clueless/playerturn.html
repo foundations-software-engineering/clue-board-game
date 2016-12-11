@@ -1,12 +1,12 @@
 {% load static %}
 {% if hasActiveSuggestion %}
-<div class="alert alert-info" role="alert">
-	<h2>You have an open suggestion, please wait.</h2>
-</div>
+<h3>You have an open suggestion, please wait.</h3>
 
 {% elif isPlayerTurn and player.gameResult == 0 %}
 <form class="form-playerturn" action="{% url 'playerturn' game.id %}" method="post" id="playerTurnForm" >{%csrf_token%}
-	<h2 class="form-playerturn-heading">It is your turn! what is your move?</h2>
+	<div class="alert alert-info" role="alert">
+		<h3 class="form-playerturn-heading">It is your turn! What is your move?</h3>
+	</div>
 	 <br>
 	  <label for="player_move">Select move:</label>
 		<select class="form-control" name="player_move" id="player_move">
@@ -17,7 +17,9 @@
 			{% if "Suggestion" in availableActions %}
 		  	<option value="makeSuggestion">Make a suggestion</option>
 			{% endif %}
+			{% if "EndTurn" in availableActions %}
 		  	<option value="endTurn">End your turn</option>
+			{% endif %}
 			{% if "Accusation" in availableActions %}
 		  	<option value="makeAccusation">Make an accusation</option>
 			{% endif %}
@@ -37,10 +39,11 @@
 	</div>
 	<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
 </form>
+<script type="text/javascript">
+	$('#player_move').focus()
+</script>
 {% else %}
-<div class="alert alert-info" role="alert">
-	<h2>It is not your turn, please wait.</h2>
-</div>
+<h3>It is not your turn, please wait.</h3>
 
 {% endif %}
 <!-- App Specific JS -->

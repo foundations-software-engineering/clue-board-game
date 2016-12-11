@@ -46,6 +46,11 @@ function getLocationFromCoordinates(x, y){
 	}
 }
 
+function addToGameStream(message){
+    var existing = $('#chatInfoBody').html();
+    $('#chatInfoBody').html(message + "<br/><br/>" + existing);
+}
+
 function updateGameState(data){
 	//Get canvas object
 	var canvasObject = document.getElementById('clueless').getContext('2d');
@@ -90,7 +95,10 @@ function updateGameState(data){
 				stage.addChild(players[characterId].createGamePiece());
 			}
 		}
-
+		//Add new entries to game stream
+		for(index = 0; index < data['gamestate']['gameStreamUpdates'].length; index++){
+            addToGameStream(data['gamestate']['gameStreamUpdates'][index]['message']);
+		}
 		//If it is the players turn, and it wasn't the players turn previously, reload action bar
 		if(data['gamestate']['isPlayerTurn'] != cached_is_player_turn ||
 		   data['gamestate']['isCardReveal'] != cached_is_card_reveal ||
