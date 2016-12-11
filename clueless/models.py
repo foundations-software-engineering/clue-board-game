@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 from django.utils import timezone
 
@@ -44,6 +45,16 @@ class SpaceCollection(models.Model):
     @property
     def space(self):
         return Space.objects.get(spaceCollector = self)
+
+    @property
+    def collectorName(self):
+        hallways = Hallway.objects.filter(id = self.id)
+        if hallways.count() > 0:
+            return hallways[0].name
+        rooms = Room.objects.filter(id = self.id)
+        if rooms.count() > 0:
+            return rooms[0].name
+        return "No Name"
 
 
 class Space(models.Model):
@@ -296,6 +307,9 @@ class Turn(models.Model):
 
         if accusationCount == 0:
             validActions.append("Accusation")
+
+        if moveCount > 0 or not self.player.currentSpace.isHallway():
+            validActions.append("EndTurn")
 
         return(validActions)
 
@@ -612,7 +626,7 @@ class Game(models.Model):
         self.currentTurn = Turn.objects.get(player=player, game=self)
 
         self.save()
-        self.registerGameUpdate()
+        self.registerGameUpdate("The game has started")
 
     def isUserInGame(self, user):
         """
@@ -651,16 +665,21 @@ class Game(models.Model):
         ds.addDefaultSheets()
         self.registerGameUpdate()
 
-    def registerGameUpdate(self):
+    def registerGameUpdate(self, description = None, specificPlayer = None):
         """
         Updates the last update time to now, and increments the current game sequence
         """
         self.refresh_from_db()
         self.lastUpdateTime = timezone.now()
+        if description is not None:
+            if specificPlayer is not None:
+                GameStreamEntry(description=description, game=self, addedAtGameSequence=self.currentSequence, playerSpecific = specificPlayer).save()
+            else:
+                GameStreamEntry(description=description, game=self, addedAtGameSequence=self.currentSequence).save()
         self.currentSequence = self.currentSequence + 1
         self.save()
 
-    def gameStateJSON(self, player):
+    def gameStateJSON(self, player, cachedGameSequence = -1):
         """
 
         :param player: Player we are rendering JSON for
@@ -705,6 +724,16 @@ class Game(models.Model):
 
         gamestate['playerstates'] = playerstates
 
+        gameStreamUpdates = []
+        gameStreamEntries = GameStreamEntry.objects.filter(
+            game=self).filter(
+            addedAtGameSequence__gte=cachedGameSequence).filter(
+            Q(playerSpecific__isnull=True) | Q(playerSpecific=player)).order_by("id")
+        for gse in gameStreamEntries:
+            gameStreamUpdates.append({"message":gse.userReplacedDescription(player)})
+
+        gamestate['gameStreamUpdates'] = gameStreamUpdates
+
         return gamestate
 
     def isAccusationCorrect(self, accusation):
@@ -725,7 +754,7 @@ class Game(models.Model):
         self.status = 2
         self.save()
 
-        self.registerGameUpdate()
+        self.registerGameUpdate("<b>{}</b> won!".format(winningPlayer.user.username))
 
     def loseGame(self, losingPlayer):
         """
@@ -734,7 +763,7 @@ class Game(models.Model):
         """
         losingPlayer.gameResult = LOST
         losingPlayer.save()
-        self.registerGameUpdate()
+        self.registerGameUpdate("<b>{}</b> lost!".format(losingPlayer.user.username))
 
     def __str__(self):
         return ("id: {}, name: {}".format(
@@ -890,6 +919,8 @@ class CardReveal(models.Model):
         Ends the reveal
         :return:
         """
+        if self.revealedCard is None:
+            self.suggestion.turn.game.registerGameUpdate("<b>{}</b> did not reveal a card".format(self.revealingPlayer.user.username))
         self.status = 2
         self.save()
 
@@ -901,3 +932,13 @@ class CardReveal(models.Model):
         initDealtCards = SheetItem.objects.filter(detectiveSheet=ds, initiallyDealt=True).values_list('card_id',
                                                                                                      flat=True)
         return suggCards.filter(card_id__in=initDealtCards)
+
+
+class GameStreamEntry(models.Model):
+    description = models.CharField(max_length=2000)
+    game = models.ForeignKey(Game)
+    addedAtGameSequence = models.IntegerField()
+    playerSpecific = models.ForeignKey(Player, blank = True, null = True)
+
+    def userReplacedDescription(self, player):
+        return self.description.replace("<b>{}</b>".format(player.user.username), "<b style='color:blue'>you</b>")

@@ -291,7 +291,6 @@ def playerturn(request, game_id):
 	context['roomObjects'] = Room.objects.all()
 	context['hallwayObjects'] = Hallway.objects.all()
 	context['validMoves'] = player.validMoves()
-	print(player.validMoves())
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:
@@ -305,9 +304,9 @@ def playerturn(request, game_id):
 			#redirect to correct page or perform logic check based on choice
 			if player_move == "makeAccusation":
 				ds = player.getDetectiveSheet()
-				context['roomSheetItems'] = ds.getRoomSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
-				context['characterSheetItems'] = ds.getCharacterSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
-				context['weaponSheetItems'] = ds.getWeaponSheetItems().order_by("checked", "-manuallyChecked", "-initiallyDealt", "card__name")
+				context['roomSheetItems'] = ds.getRoomSheetItems().order_by("-manuallyChecked", "checked", "-initiallyDealt", "card__name")
+				context['characterSheetItems'] = ds.getCharacterSheetItems().order_by("-manuallyChecked", "checked", "-initiallyDealt", "card__name")
+				context['weaponSheetItems'] = ds.getWeaponSheetItems().order_by("-manuallyChecked", "checked", "-initiallyDealt", "card__name")
 				context['player'] = player
 				template = loader.get_template('clueless/makeAccusation.html')
 
@@ -336,7 +335,10 @@ def playerturn(request, game_id):
 				if moveStatus is not None:
 					return (HttpResponse(status=500, content="error making move"))
 
-				game.registerGameUpdate()
+				game.registerGameUpdate("<b>{}</b> moved to <b>{}</b>".format(
+					player.user.username,
+					new_space.spaceCollector.collectorName
+				))
 				#print("player wants to move from ", player.currentSpace, " to ", new_space)
 				"""
 				# validate the move
@@ -361,7 +363,7 @@ def playerturn(request, game_id):
 							return HttpResponse(status=403, content="player cannot start and end turn in hallway")
 				if (turn.player == player):
 					turn.endTurn()
-					game.registerGameUpdate()
+					game.registerGameUpdate("<b>{}</b> ended turn".format(player.user.username))
 
 				#not taking this approach, since it creates unnecessary turn objects
 				#although I like the creativity :)
@@ -458,7 +460,7 @@ def gamestate(request):
 		responseData['changed'] = False
 	else:
 		responseData['changed'] = True
-		responseData['gamestate'] = game.gameStateJSON(player)
+		responseData['gamestate'] = game.gameStateJSON(player, cached_game_seq)
 
 	return JsonResponse(responseData)
 
@@ -652,7 +654,15 @@ def card_reveal_controller(request, game_id, player_id):
 					break
 				cr = cr.createNext()
 
-		game.registerGameUpdate()
+		game.registerGameUpdate("<b>{}</b> revealed a card to <b>{}</b>".format(cardReveal.revealingPlayer.user.username, cardReveal.suggestion.turn.player.user.username))
+		game.registerGameUpdate("<b>{}</b> revealed the card <b>{}</b> to <b>{}</b>".format(
+			cardReveal.revealingPlayer.user.username,
+			cardReveal.revealedCard.name,
+			cardReveal.suggestion.turn.player.user.username), cardReveal.revealingPlayer)
+		game.registerGameUpdate("<b>{}</b> revealed the card <b>{}</b> to <b>{}</b>".format(
+			cardReveal.revealingPlayer.user.username,
+			cardReveal.revealedCard.name,
+			cardReveal.suggestion.turn.player.user.username), cardReveal.suggestion.turn.player)
 
 
 	context['game'] = game
@@ -714,11 +724,18 @@ def make_suggestion_controller(request, game_id, player_id):
 		return HttpResponse(status=403, content="it is not this players turn")
 
 	sugg = Suggestion.createSuggestion(turn, suspect, room, weapon)
+	game.registerGameUpdate("<b>{}</b> suggested it was <b>{}</b> in the <b>{}</b> with the <b>{}</b>".format(
+		player.user.username,
+		sugg.whoWhatWhere.character.name,
+		sugg.whoWhatWhere.room.name,
+		sugg.whoWhatWhere.weapon.name
+	))
+
 	actionStatus = turn.takeAction(sugg)
 	if actionStatus is not None:
 		return(HttpResponse(status = 500, content = "error making suggestion"))
 
-	game.registerGameUpdate()
+
 
 	request.method = "GET"
 	return playerturn(request, game_id)
@@ -774,11 +791,18 @@ def make_accusation_controller(request, game_id, player_id):
 		return HttpResponse(status=403, content="it is not this players turn")
 
 	acc = Accusation.createAccusation(turn, suspect, room, weapon)
+
+	game.registerGameUpdate(
+		"<b>{}</b> made the accusation that it was <b>{}</b> in the <b>{}</b> with the <b>{}</b>".format(
+			player.user.username,
+			acc.whoWhatWhere.character.name,
+			acc.whoWhatWhere.room.name,
+			acc.whoWhatWhere.weapon.name
+		))
+
 	actionStatus = turn.takeAction(acc)
 	if actionStatus is not None:
 		return (HttpResponse(status=500, content="error making accusation"))
-
-	game.registerGameUpdate()
 
 	request.method = "GET"
 	return playerturn(request, game_id)

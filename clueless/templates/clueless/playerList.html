@@ -7,7 +7,7 @@
             <th>Username</th>
         </tr>
     </thead>
-    <tbody>
+    <tbody style="font-size:smaller;">
         {% for ap in allPlayers %}
         <tr
                 {% if ap.nonUserPlayer %}
@@ -21,7 +21,7 @@
                 {% endif%}
 
         >
-            <td><img height="25px" src="{% static 'clueless/images/' %}{{ap.character.characterColor}}.png"/></td>
+            <td><img height="20px" src="{% static 'clueless/images/' %}{{ap.character.characterColor}}.png"/></td>
             {% if ap == player %}
             <td><b>{{ap.character.name}}</b></td>
             <td><b>{{ap.user.username}}</b></td>

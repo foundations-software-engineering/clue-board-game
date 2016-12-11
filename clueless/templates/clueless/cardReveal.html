@@ -5,7 +5,7 @@
     <div class="alert alert-info" role="alert">
         {{cardReveal.suggestion.actionDescription |safe}}
     </div>
-    <h2 class="form-accusation-heading">Which card will you reveal to <b>{{cardReveal.suggestion.turn.player.user.username}}?</b></h2>
+    <h3 class="form-accusation-heading">Which card will you reveal to <b>{{cardReveal.suggestion.turn.player.user.username}}?</b></h3>
 	<br>
 	  <label for="card_reveal_card">Select card:</label>
 		<select class="form-control" name="card_id" id="card_reveal_card">
@@ -18,5 +18,7 @@
     <br>
 <button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
 </form>
-
+<script type="text/javascript">
+	$('#card_reveal_card').focus()
+</script>
 <script src="{% static 'clueless/js/cardReveal.js' %}"></script>
