@@ -27,19 +27,13 @@
 	<div id="new_position_div">
 		<label for="new_position" id=new_position_label>Move to the:</label>
 			<select class="form-control" name="new_position" id="new_position">
-			{% for room in roomObjects %}
-				<option value="{{room.id}}" aria-hidden="true">
-					{{room.name}}
-				</option>
-			{% endfor %}
-			{% for hallway in hallwayObjects %}
-				<option value="{{hallway.id}}" aria-hidden="true">
-					{{hallway.name}}
+			{% for space in validMoves %}
+				<option value="{{space.id}}" aria-hidden="true">
+					{{space.name}}
 				</option>
 			{% endfor %}
 			</select>
 		<br>
-
 	</div>
 	<button class="btn btn-lg btn-primary btn-block" id="playerturn">Submit</button>
 </form>

@@ -290,6 +290,7 @@ def playerturn(request, game_id):
 	context['player'] = player
 	context['roomObjects'] = Room.objects.all()
 	context['hallwayObjects'] = Hallway.objects.all()
+	context['validMoves'] = player.validMoves()
 
 	if request.method == 'POST':
 		if 'user_id' or 'player_move' in request.POST:

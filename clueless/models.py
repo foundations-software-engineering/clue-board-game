@@ -104,6 +104,49 @@ class Player(models.Model):
     def isInRoom(self):
         return Room.objects.filter(id = self.currentSpace.spaceCollector.id).count() > 0
 
+    def validMoves(self):
+        currentSpace = self.currentSpace
+        validMoves = []
+
+        roomObjects = Room.objects.all()
+        hallwayObjects = Hallway.objects.all()
+
+        for room in roomObjects:
+            roomSpace = Space.objects.get(spaceCollector__id = room.id)
+            print(roomSpace)
+            if self.currentSpace == roomSpace:
+                if hasattr(self.currentSpace, 'spaceNorth'):
+                    if(self.currentSpace.spaceNorth is not None):
+                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceNorth))
+                if hasattr(self.currentSpace, 'spaceEast'):
+                    if(self.currentSpace.spaceEast is not None):
+                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceEast))
+                if hasattr(self.currentSpace, 'spaceSouth'):
+                    if(self.currentSpace.spaceSouth is not None):
+                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceSouth))
+                if hasattr(self.currentSpace, 'spaceWest'):
+                    if(self.currentSpace.spaceWest is not None):
+                        validMoves.append(Hallway.objects.get(space=self.currentSpace.spaceWest))
+
+        for hall in hallwayObjects:
+            hallSpace = Space.objects.get(spaceCollector__id = hall.id)
+            print(hall)
+            if self.currentSpace == hallSpace:
+                if hasattr(self.currentSpace, 'spaceNorth'):
+                    if self.currentSpace.spaceNorth is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceNorth))
+                if hasattr(self.currentSpace, 'spaceEast'):
+                    if self.currentSpace.spaceEast is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceEast))
+                if hasattr(self.currentSpace, 'spaceSouth'):
+                    if self.currentSpace.spaceSouth is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceSouth))
+                if hasattr(self.currentSpace, 'spaceWest'):
+                    if self.currentSpace.spaceWest is not None:
+                        validMoves.append(Room.objects.get(space=self.currentSpace.spaceWest))
+
+        return validMoves
+
 
 class Hallway(SpaceCollection):
     name = models.CharField(max_length = 50, blank=True)
