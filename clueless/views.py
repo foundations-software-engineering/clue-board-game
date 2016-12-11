@@ -332,7 +332,7 @@ def playerturn(request, game_id):
 				print("player wants to move from ", player.currentSpace, " to ", new_space)
 
 				#validate the move
-				canMove = move.validate()
+				canMove = move.validate(game)
 				if canMove:
 					player.currentSpace = new_space
 					player.save()

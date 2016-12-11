@@ -374,26 +374,31 @@ class Move(Action):
     fromSpace = models.ForeignKey(Space, related_name='fromSpace')
     toSpace = models.ForeignKey(Space, related_name='toSpace')
 
-    def validate(self):
+    def validate(self, game):
 
-        if hasattr(self.fromSpace, 'spaceNorth'):
-            if self.toSpace == self.fromSpace.spaceNorth:
-                return True
-        if hasattr(self.fromSpace, 'spaceEast'):
-            if self.toSpace == self.fromSpace.spaceEast:
-                return True
-        if hasattr(self.fromSpace, 'spaceSouth'):
-            if self.toSpace == self.fromSpace.spaceSouth:
-                return True
-        if hasattr(self.fromSpace, 'spaceWest'):
-            if self.toSpace == self.fromSpace.spaceWest:
-                return True
-        return False
+        if self.checkHallwayEmpty(game):
+            if hasattr(self.fromSpace, 'spaceNorth'):
+                if self.toSpace == self.fromSpace.spaceNorth:
+                    return True
+            if hasattr(self.fromSpace, 'spaceEast'):
+                if self.toSpace == self.fromSpace.spaceEast:
+                    return True
+            if hasattr(self.fromSpace, 'spaceSouth'):
+                if self.toSpace == self.fromSpace.spaceSouth:
+                    return True
+            if hasattr(self.fromSpace, 'spaceWest'):
+                if self.toSpace == self.fromSpace.spaceWest:
+                    return True
+            return False
+        else:
+            return False
 
-        # if (self.fromSpace.posX + 2 == self.toSpace.posX) or (self.fromSpace.posX - 2  == self.toSpace.posX) or (self.fromSpace.posY+ 2  == self.toSpace.posY) or (self.fromSpace.posY - 2  == self.toSpace.posY):
-        #     return True
-        # else:
-        #     return False
+    def checkHallwayEmpty(self, game):
+        players = Player.objects.filter(currentGame =game)
+        for player in players:
+            if self.toSpace == player.currentSpace:
+                return False
+        return True
 
     def performAction(self):
         # TODO: implement
