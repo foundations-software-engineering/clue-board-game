@@ -255,7 +255,7 @@ class Turn(models.Model):
         """players = Player.objects.filter(currentGame = self.game).exclude(nonUserPlayer = True).exclude(gameResult = -1)
         next_player = None
         for i, player in enumerate(players):
-            if player.compare(currentPlayer):
+            if player.character.compare(currentPlayer.character):
                 next_player = players[(i+1) % len(players)]
                 break"""
 
@@ -265,6 +265,7 @@ class Turn(models.Model):
         self.game.refresh_from_db()
         self.game.currentTurn = turn
         self.game.save()
+
 
 
 class Action(models.Model):

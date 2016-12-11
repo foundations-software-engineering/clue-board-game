@@ -274,7 +274,6 @@ def playerturn(request, game_id):
 
 	#get request variables
 	user_id = request.user
-	#mocked for now, will get for real in jerrold's branch
 	game = Game.objects.get(id = game_id)
 	context['game'] = game
 	player = Player.objects.get(user = user_id, currentGame=game)
@@ -341,6 +340,17 @@ def playerturn(request, game_id):
 				if(turn.player == player):
 					turn.endTurn()
 					game.registerGameUpdate()
+
+				#not taking this approach, since it creates unnecessary turn objects
+				#although I like the creativity :)
+				"""
+				game.currentTurn.endTurn()
+				#get game again and checks to skip non users
+				game = Game.objects.get(id = game_id)
+				while game.currentTurn.player.nonUserPlayer:
+					game.currentTurn.endTurn()
+					game = Game.objects.get(id = game_id)
+				"""
 
 		else:
 			#TODO: replace with logging later(don't want to replicate from grehg's but will use below commented out code)
