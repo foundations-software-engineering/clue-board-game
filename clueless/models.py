@@ -376,20 +376,19 @@ class Move(Action):
 
     def validate(self):
 
-        if self.toSpace == self.fromSpace.spaceNorth:
-            return True
-        elif self.toSpace == self.fromSpace.spaceSouth:
-            return True
-        elif self.toSpace == self.fromSpace.spaceWest:
-            return True
-        elif self.toSpace.spaceNorth == self.fromSpace:
-            return True
-        elif self.toSpace.spaceSouth == self.fromSpace:
-            return True
-        elif self.toSpace.spaceWest == self.fromSpace:
-            return True
-        else:
-            return False
+        if hasattr(self.fromSpace, 'spaceNorth'):
+            if self.toSpace == self.fromSpace.spaceNorth:
+                return True
+        if hasattr(self.fromSpace, 'spaceEast'):
+            if self.toSpace == self.fromSpace.spaceEast:
+                return True
+        if hasattr(self.fromSpace, 'spaceSouth'):
+            if self.toSpace == self.fromSpace.spaceSouth:
+                return True
+        if hasattr(self.fromSpace, 'spaceWest'):
+            if self.toSpace == self.fromSpace.spaceWest:
+                return True
+        return False
 
         # if (self.fromSpace.posX + 2 == self.toSpace.posX) or (self.fromSpace.posX - 2  == self.toSpace.posX) or (self.fromSpace.posY+ 2  == self.toSpace.posY) or (self.fromSpace.posY - 2  == self.toSpace.posY):
         #     return True

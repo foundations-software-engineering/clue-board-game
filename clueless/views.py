@@ -337,7 +337,6 @@ def playerturn(request, game_id):
 					player.currentSpace = new_space
 					player.save()
 					game.registerGameUpdate()
-					print("player moved")
 				else:
 					room =  Room.objects.get(id=new_room)
 					print("Player cannot be moved to the ", str(room.name))
